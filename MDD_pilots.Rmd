@@ -1,0 +1,149 @@
+---
+title: "MDD Pilot Analyses"
+author: "JC"
+date: "2.10.20"
+output:
+  html_document: default
+  code_folding: "hide"
+---
+#Cross-Domain Discounting Project (18 YAs)
+
+```{r setup, warning=FALSE, message=FALSE}
+rm(list=ls())
+
+# Packages
+library(WRS2); library(ez); library(lme4); library(knitr); library(kableExtra); library(RColorBrewer); library(tidyverse);
+source("summarySEwithin2.R")
+
+#Create data directories
+coged.wm.path<-"~/Box Sync/CCPLab_Aging_Studies/Multi-Domain-Discounting/Data/WM-Cog-ED/coged_wm_data.csv"
+coged.speech.path<-"~/Box Sync/CCPLab_Aging_Studies/Multi-Domain-Discounting/Data/Speech-Cog-ED/coged_speech_data.csv"
+NASA.wm.path <- "~/Box Sync/CCPLab_Aging_Studies/Multi-Domain-Discounting/Data/Indvidual-Diff-Qs/MDD_NASA_WM.csv"
+NASA.speech.path <- "~/Box Sync/CCPLab_Aging_Studies/Multi-Domain-Discounting/Data/Indvidual-Diff-Qs/MDD_NASA_Speech.csv"
+
+#Make data frames for Cog-ED and NASA TLX 
+coged.wm <- read.csv(coged.wm.path, header = T)
+coged.speech <- read.csv(coged.speech.path, header = T)
+NASA.wm <- read.csv(NASA.wm.path, header = T)
+NASA.speech <- read.csv(NASA.speech.path, header = T)
+```
+
+```{r SV_CogED, warning=F, message=F}
+#clean data frame with Cog-ED SV estimates and join data across both domains (i.e., WM, speech)
+d.coged.wm <- coged.wm %>%
+  group_by(subID, task) %>%
+  dplyr::summarise(meanSV = mean(SV)) %>%
+  mutate(Domain = "WM", 
+         task = factor(task, levels=c(1,2,3), labels=c("Red","Blue","Purple")),
+        taskCode = factor(task, levels=c(1,2,3), labels=c(-1,0,1)))            
+
+d.coged.speech <- coged.speech %>%
+  group_by(subID, task) %>%
+  dplyr::summarise(meanSV = mean(SV)) %>%
+  mutate(Domain = "Speech",
+          task = factor(task, levels=c(1,2,3), labels=c("Red","Blue","Purple")),
+        taskCode = factor(task, levels=c(1,2,3), labels=c(-1,0,1)))
+
+coged.merged <- rbind(d.coged.wm, d.coged.speech)
+```
+
+##Cognitive Effort Discounting
+###Working Memory (Black = 1-back, Red = 2-Back, Blue = 3-back, Purple = 4-back)
+###Speech (Black = 0 SNR, Red = -4 SNR, Blue = -8 SNR, Purple = -12 SNR)
+
+``` {r CogED_Plot, warning = F, message = F}
+CogED_sum <- summarySEwithin2(coged.merged, measurevar = "meanSV", withinvars = c("task", "Domain"), idvar = "subID")
+
+#Plotting SV across both WM and speech domains
+p.1 <- ggplot(CogED_sum, aes(x=task, y=meanSV)) + 
+  theme(plot.title = element_text(hjust = 0.5), panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background = element_blank(), axis.line = element_line(colour = "black")) +
+  geom_bar(stat="identity", position=position_dodge()) +
+  geom_errorbar(position=position_dodge(width=0.9), aes(ymin=meanSV-ci, ymax=meanSV+ci), width=.2) +  
+  coord_cartesian(ylim=c(0,1)) +
+  xlab("Task") + ylab("Subjective Value") + ggtitle("Cross-Domain Cognitive Effort Discounting") + 
+  facet_grid(.~ Domain)
+p.1
+
+#Correlating Average SV (within-subj) across domains
+average.SV <- coged.merged %>%
+  group_by(subID, Domain) %>%
+  dplyr::summarise(SV_avg = mean(meanSV)) %>%
+  pivot_wider(values_from = "SV_avg", names_from = "Domain")
+
+p.2 <- ggplot(average.SV, aes(Speech, WM)) +
+   theme(plot.title = element_text(hjust = 0.5), panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background = element_blank(), axis.line = element_line(colour = "black")) +
+  geom_point() + geom_smooth(method=lm) +ggtitle("Within-Subject Correlation Across WM & Speech Domains")
+p.2
+cor(average.SV$Speech, average.SV$WM)
+```
+
+##Self-Report Questionnaires 
+
+``` {r Self-Report, warning = F, message = F}
+#cleaning up data structures from REDCap
+NASA.wm.clean <- NASA.wm %>% select( -"nasawm_complete") %>%
+  pivot_longer(names_to = "condition", values_to = "rating", -record_id) %>%
+  separate(col = condition, into=c("Task","Characteristic"), sep = "_") %>%
+  pivot_wider(values_from = rating, names_from = Characteristic) %>%
+  rename(mental_demand = mdemand, 
+         phsyical_demand = pdemand, 
+         temporal_demand = tdemand) %>%
+  mutate(Domain = "WM")
+
+NASA.speech.clean <- NASA.speech %>% select( -"nasaspeech_complete") %>%
+  pivot_longer(names_to = "condition", values_to = "rating", -record_id) %>%
+  separate(col = condition, into=c("Task","Characteristic"), sep = "_") %>%
+  pivot_wider(values_from = rating, names_from = Characteristic) %>%
+  rename(mental_demand = mdemand, 
+         phsyical_demand = pdemand, 
+         temporal_demand = tdemand) %>%
+  mutate(Domain = "Speech")
+
+NASA.merged <- rbind(NASA.wm.clean, NASA.speech.clean)
+
+#Mental Demand Ratings
+NASA.m.demand <- NASA.merged %>% select(record_id, Task, Domain, mental_demand) %>%
+  group_by(record_id, Task, Domain) %>%
+  dplyr::summarise(mean.m.demand = mean(mental_demand))
+NASA_mdemand_sum <- summarySEwithin2(NASA.m.demand, measurevar = "mean.m.demand", withinvars = c("Task", "Domain"), idvar = "record_id")
+NASA_mdemand_sum$Task <- factor(NASA_mdemand_sum$Task, levels = c("black", "red", "blue", "purple"), labels = c("black", "red", "blue", "purple"))
+
+p.m.demand <- ggplot(NASA_mdemand_sum, aes(x=Task, y=mean.m.demand)) + 
+  theme(plot.title = element_text(hjust = 0.5), panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background = element_blank(), axis.line = element_line(colour = "black")) +
+  geom_bar(stat="identity", position=position_dodge()) +
+  geom_errorbar(position=position_dodge(width=0.9), aes(ymin=mean.m.demand-ci, ymax=mean.m.demand+ci), width=.2) +  
+  xlab("Task") + ylab("Mental Demand") + ggtitle("Self-Reported Mental Demand") + 
+  facet_grid(.~ Domain)
+p.m.demand
+
+#Effort Ratings
+NASA.effort <- NASA.merged %>% select(record_id, Task, Domain, effort) %>%
+  group_by(record_id, Task, Domain) %>%
+  dplyr::summarise(mean.effort = mean(effort))
+NASA_effort_sum <- summarySEwithin2(NASA.effort, measurevar = "mean.effort", withinvars = c("Task", "Domain"), idvar = "record_id")
+NASA_effort_sum$Task <- factor(NASA_effort_sum$Task, levels = c("black", "red", "blue", "purple"), labels = c("black", "red", "blue", "purple"))
+
+p.effort <- ggplot(NASA_effort_sum, aes(x=Task, y=mean.effort)) + 
+  theme(plot.title = element_text(hjust = 0.5), panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background = element_blank(), axis.line = element_line(colour = "black")) +
+  geom_bar(stat="identity", position=position_dodge()) +
+  geom_errorbar(position=position_dodge(width=0.9), aes(ymin=mean.effort-ci, ymax=mean.effort+ci), width=.2) +  
+  xlab("Task") + ylab("Effort") + ggtitle("Self-Reported Effort") + 
+  facet_grid(.~ Domain)
+p.effort
+
+#Frustration Ratings
+NASA.frust <- NASA.merged %>% select(record_id, Task, Domain, frustration) %>%
+  group_by(record_id, Task, Domain) %>%
+  dplyr::summarise(mean.frust = mean(frustration))
+NASA_frust_sum <- summarySEwithin2(NASA.frust, measurevar = "mean.frust", withinvars = c("Task", "Domain"), idvar = "record_id")
+NASA_frust_sum$Task <- factor(NASA_frust_sum$Task, levels = c("black", "red", "blue", "purple"), labels = c("black", "red", "blue", "purple"))
+
+p.frust <- ggplot(NASA_frust_sum, aes(x=Task, y=mean.frust)) + 
+  theme(plot.title = element_text(hjust = 0.5), panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background = element_blank(), axis.line = element_line(colour = "black")) +
+  geom_bar(stat="identity", position=position_dodge()) +
+  geom_errorbar(position=position_dodge(width=0.9), aes(ymin=mean.frust-ci, ymax=mean.frust+ci), width=.2) +  
+  xlab("Task") + ylab("Frustration") + ggtitle("Self-Reported Frustration") + 
+  facet_grid(.~ Domain)
+p.frust
+```
+
