@@ -1,5 +1,5 @@
 ---
-title: "MDD Pilot Analyses"
+title: "Pilot Analyses--Cross Domain Discounting"
 author: "JC"
 date: "2.10.20"
 output:
@@ -72,7 +72,7 @@ average.SV <- coged.merged %>%
 
 p.2 <- ggplot(average.SV, aes(Speech, WM)) +
    theme(plot.title = element_text(hjust = 0.5), panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background = element_blank(), axis.line = element_line(colour = "black")) +
-  geom_point() + geom_smooth(method=lm) +ggtitle("Within-Subject Correlation Across WM & Speech Domains")
+  geom_point() + geom_smooth(method=lm) +ggtitle("Average SV Estimates Across WM & Speech Domains")
 p.2
 cor(average.SV$Speech, average.SV$WM)
 ```
