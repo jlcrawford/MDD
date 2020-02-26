@@ -6,13 +6,13 @@ output:
   html_document: default
   code_folding: "hide"
 ---
-#Cross-Domain Discounting Project (18 YAs)
+#Cross-Domain Discounting Project (26 YAs)
 
 ```{r setup, warning=FALSE, message=FALSE}
 rm(list=ls())
 
 # Packages
-library(WRS2); library(ez); library(lme4); library(knitr); library(kableExtra); library(RColorBrewer); library(tidyverse);
+library(lme4); library(knitr); library(kableExtra); library(RColorBrewer); library(tidyverse);
 source("summarySEwithin2.R")
 
 #Create data directories
