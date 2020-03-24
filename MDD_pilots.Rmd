@@ -6,7 +6,7 @@ output:
   html_document: default
   code_folding: "hide"
 ---
-#Cross-Domain Discounting Project (26 YAs)
+#Cross-Domain Discounting Project (31 YAs)
 
 ```{r setup, warning=FALSE, message=FALSE}
 rm(list=ls())
@@ -34,17 +34,37 @@ d.coged.wm <- coged.wm %>%
   group_by(subID, task) %>%
   dplyr::summarise(meanSV = mean(SV)) %>%
   mutate(Domain = "WM", 
-         task = factor(task, levels=c(1,2,3), labels=c("Red","Blue","Purple")),
-        taskCode = factor(task, levels=c(1,2,3), labels=c(-1,0,1)))            
+         DomainCode = 0,
+         taskCode = factor(task, levels=c(1,2,3), labels=c(-1,0,1)),
+         task = factor(task, levels=c(1,2,3), labels=c("Red","Blue","Purple")))
 
 d.coged.speech <- coged.speech %>%
   group_by(subID, task) %>%
   dplyr::summarise(meanSV = mean(SV)) %>%
   mutate(Domain = "Speech",
-          task = factor(task, levels=c(1,2,3), labels=c("Red","Blue","Purple")),
-        taskCode = factor(task, levels=c(1,2,3), labels=c(-1,0,1)))
+         DomainCode = 1,
+          taskCode = factor(task, levels=c(1,2,3), labels=c(-1,0,1)),
+          task = factor(task, levels=c(1,2,3), labels=c("Red","Blue","Purple")))
 
 coged.merged <- rbind(d.coged.wm, d.coged.speech)
+
+#testing for differences across task (WM, speech) & condition (red, blue, purple)
+m.SV <- lmer(data = coged.merged, meanSV ~ taskCode*DomainCode + (1 | subID))
+summary(m.SV)
+
+#testing for differences across domain for each load level of the task
+#Red Task (2-Back, -4SNR)
+t.test(x = subset(coged.merged, Domain=="WM" & task=="Red")$meanSV,
+       y = subset(coged.merged, Domain=="Speech" & task =="Red")$meanSV,
+       paired = TRUE)
+#Blue Task (3-Back, -8SNR)
+t.test(x = subset(coged.merged, Domain=="WM" & task=="Blue")$meanSV,
+       y = subset(coged.merged, Domain=="Speech" & task =="Blue")$meanSV,
+       paired = TRUE)
+#Purple Task (4-Back, -12SNR)
+t.test(x = subset(coged.merged, Domain=="WM" & task=="Purple")$meanSV,
+       y = subset(coged.merged, Domain=="Speech" & task =="Purple")$meanSV,
+       paired = TRUE)
 ```
 
 ##Cognitive Effort Discounting
@@ -64,16 +84,29 @@ p.1 <- ggplot(CogED_sum, aes(x=task, y=meanSV)) +
   facet_grid(.~ Domain)
 p.1
 
+p.2 <- ggplot(CogED_sum, aes(x=task, y=meanSV)) + 
+  theme(plot.title = element_text(hjust = 0.5), panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background = element_blank(), axis.line = element_line(colour = "black")) +
+  geom_bar(stat="identity", position=position_dodge()) +
+  geom_errorbar(position=position_dodge(width=0.9), aes(ymin=meanSV-ci, ymax=meanSV+ci), width=.2) +  
+   geom_point(data = coged.merged, aes(x=task, y=meanSV, group=subID),
+             stat="identity", alpha=0.5) +
+  geom_line(data = coged.merged, aes(x=task, y=meanSV, group=subID, colour = factor(subID)), alpha = .5) +
+  coord_cartesian(ylim=c(0,1)) +
+  xlab("Task") + ylab("Subjective Value") +
+  facet_grid(.~ Domain)
+p.CogED <- p.2 + guides(colour=FALSE) 
+p.CogED
+
 #Correlating Average SV (within-subj) across domains
 average.SV <- coged.merged %>%
   group_by(subID, Domain) %>%
   dplyr::summarise(SV_avg = mean(meanSV)) %>%
   pivot_wider(values_from = "SV_avg", names_from = "Domain")
 
-p.2 <- ggplot(average.SV, aes(Speech, WM)) +
+p.3 <- ggplot(average.SV, aes(Speech, WM)) +
    theme(plot.title = element_text(hjust = 0.5), panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background = element_blank(), axis.line = element_line(colour = "black")) +
   geom_point() + geom_smooth(method=lm) +ggtitle("Average SV Estimates Across WM & Speech Domains")
-p.2
+p.3
 cor(average.SV$Speech, average.SV$WM)
 ```
 
