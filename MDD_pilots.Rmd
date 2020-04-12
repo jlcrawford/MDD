@@ -1,7 +1,7 @@
 ---
 title: "Pilot Analyses--Cross Domain Discounting"
 author: "JC"
-date: "2.10.20"
+date: "4.10.20"
 output:
   html_document: default
   code_folding: "hide"
@@ -20,12 +20,18 @@ coged.wm.path<-"~/Box Sync/CCPLab_Aging_Studies/Multi-Domain-Discounting/Data/WM
 coged.speech.path<-"~/Box Sync/CCPLab_Aging_Studies/Multi-Domain-Discounting/Data/Speech-Cog-ED/coged_speech_data.csv"
 NASA.wm.path <- "~/Box Sync/CCPLab_Aging_Studies/Multi-Domain-Discounting/Data/Indvidual-Diff-Qs/MDD_NASA_WM.csv"
 NASA.speech.path <- "~/Box Sync/CCPLab_Aging_Studies/Multi-Domain-Discounting/Data/Indvidual-Diff-Qs/MDD_NASA_Speech.csv"
+NCS.path <- "~/Box Sync/CCPLab_Aging_Studies/Multi-Domain-Discounting/Data/Indvidual-Diff-Qs/MDD_NCS.csv"
+Post.coged.wm.path <- "~/Box Sync/CCPLab_Aging_Studies/Multi-Domain-Discounting/Data/Indvidual-Diff-Qs/MDD_Post_CogED_WM.csv"
+Post.coged.speech.path <- "~/Box Sync/CCPLab_Aging_Studies/Multi-Domain-Discounting/Data/Indvidual-Diff-Qs/MDD_Post_CogED_Speech.csv"
 
 #Make data frames for Cog-ED and NASA TLX 
 coged.wm <- read.csv(coged.wm.path, header = T)
 coged.speech <- read.csv(coged.speech.path, header = T)
 NASA.wm <- read.csv(NASA.wm.path, header = T)
 NASA.speech <- read.csv(NASA.speech.path, header = T)
+NCS <- read.csv(NCS.path, header = T)
+Post.coged.wm <- read.csv(Post.coged.wm.path, header = T)
+Post.coged.speech <- read.csv(Post.coged.speech.path, header = T)
 ```
 
 ```{r SV_CogED, warning=F, message=F}
@@ -110,9 +116,10 @@ p.3
 cor(average.SV$Speech, average.SV$WM)
 ```
 
-##Self-Report Questionnaires 
+##Self-Report Questionnaires
+###NASA TLX (administered after each run of the familiarization tasks)
 
-``` {r Self-Report, warning = F, message = F}
+``` {r NASA, warning = F, message = F}
 #cleaning up data structures from REDCap
 NASA.wm.clean <- NASA.wm %>% select( -"nasawm_complete") %>%
   pivot_longer(names_to = "condition", values_to = "rating", -record_id) %>%
@@ -178,5 +185,66 @@ p.frust <- ggplot(NASA_frust_sum, aes(x=Task, y=mean.frust)) +
   xlab("Task") + ylab("Frustration") + ggtitle("Self-Reported Frustration") + 
   facet_grid(.~ Domain)
 p.frust
+
+#Correlating Average NASA TLX Ratings (within-subj) across domains
+average.NASA <- NASA.merged %>%
+  pivot_longer(names_to = "Characteristic", values_to = "rating", -c(record_id, Task, Domain)) %>%
+  filter(Characteristic == c("mental_demand", "effort", "frustration")) %>%
+  group_by(record_id, Characteristic, Domain) %>%
+  dplyr::summarise(rating_avg = mean(rating, na.rm = T))  %>%
+  pivot_wider(values_from = "rating_avg", names_from = "Domain")
+
+p.NASA <- ggplot(average.NASA, aes(Speech, WM)) +
+   theme(plot.title = element_text(hjust = 0.5), panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background = element_blank(), axis.line = element_line(colour = "black")) +
+  geom_point() + geom_smooth(method=lm) +ggtitle("NASA TLX Ratings Across WM & Speech Domains") +
+    facet_grid(.~ Characteristic)
+p.NASA
+
+##Correlation Values
+#Effort
+NASA.effort.cor <- average.NASA %>% filter(Characteristic =="effort")
+cor(NASA.effort.cor$Speech, NASA.effort.cor$WM)
+
+#Frustration
+NASA.frust.cor <- average.NASA %>% filter(Characteristic =="frustration")
+cor(NASA.frust.cor$Speech, NASA.frust.cor$WM)
+
+#Mental Demand
+NASA.demand.cor <- average.NASA %>% filter(Characteristic =="mental_demand")
+cor(NASA.demand.cor$Speech, NASA.demand.cor$WM)
+```
+
+###Need for Cognition
+``` {r NCS, warning = F, message =  F}
+NCS.clean <- NCS %>% select( -"ncs_complete") %>%
+  mutate(NCS.score = rowSums(.[2:19]))
+```
+
+###Post-Task Questionnaires
+####Cog-ED
+
+``` {r PostTask, warning = F, message = F}
+#cleaning up data structures from REDCap
+WM.coged.clean <- Post.coged.wm %>% select( -c("posttaskcoged_wm_complete", "coged_hardchoice", "coged_easychoice")) %>%
+  pivot_longer(names_to = "condition", values_to = "rating", -record_id) %>%
+  separate(col = condition, into = c(NA,"Characteristic"), sep = "_") %>%
+  mutate(Domain = "WM")
+
+Speech.coged.clean <- Post.coged.speech %>% select( -c("posttaskcoged_speech_complete", "coged_hardchoice_speech", "coged_easychoice_speech")) %>%
+  pivot_longer(names_to = "condition", values_to = "rating", -record_id) %>%
+  separate(col = condition, into = c(NA,"Characteristic"), sep = "_") %>%
+  mutate(Domain = "Speech")
+
+PostTask.coged.merged <- rbind(WM.coged.clean, Speech.coged.clean)
+
+#Post-Task Cog-ED Ratings
+PT.coged.sum <- summarySEwithin2(PostTask.coged.merged, measurevar = "rating", withinvars = c("Characteristic", "Domain"), idvar = "record_id")
+p.PT.coged <- ggplot(PT.coged.sum, aes(x=Domain, y=rating)) + 
+  theme(plot.title = element_text(hjust = 0.5), panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background = element_blank(), axis.line = element_line(colour = "black")) +
+  geom_bar(stat="identity", position=position_dodge()) +
+  geom_errorbar(position=position_dodge(width=0.9), aes(ymin=rating-ci, ymax=rating+ci), width=.2) +  
+  xlab("Task") + ylab("Rating") +
+   facet_grid(.~ Characteristic)
+p.PT.coged
 ```
 
