@@ -2,9 +2,9 @@
 title: "Pilot Analyses--Multi-Domain Discounting"
 author: "JC"
 date: "4.10.20"
-output:
-  html_document: default
-  code_folding: "hide"
+output: 
+  html_document:
+    code_folding: "hide"
 ---
 #Multi-Domain Discounting Project (31 YAs)
 
