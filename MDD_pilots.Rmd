@@ -12,11 +12,11 @@ output:
 rm(list=ls())
 
 #Packages
-library(BayesFactor); library(brms); library(knitr); library(kableExtra); library(RColorBrewer); library(tidyverse);
+library(BayesFactor); library(bayestestR); library(brms); library(knitr); library(kableExtra); library(RColorBrewer); library(tidyverse);
 source("summarySEwithin2.R")
 
 #Package versions used for these analyses
-## BayesFactor_0.9.12-4.2; brms_2.12.0; knitr_1.25; kableExtra_1.1.0; RColorBrewer_1.1-2; tidyverse_1.3.0; R version 3.5.2
+## BayesFactor_0.9.12-4.2; bayestestR_0.6.0; brms_2.12.0; knitr_1.25; kableExtra_1.1.0; RColorBrewer_1.1-2; tidyverse_1.3.0; R version 3.5.2
 
 #Create data directories
 coged.wm.path<-"https://raw.githubusercontent.com/jlcrawford/MDD/master/Data/coged_wm_data.csv"
