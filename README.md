@@ -1,0 +1,1 @@
+# Here, you will find analysis scripts, in addition to summary data files, for our Multi-Domain Discounting study. For raw data, or other materials, please visit our OSF page: https://osf.io/9t6q7/?view_only=cc143ba2834c4aef8f034ba046b01098
