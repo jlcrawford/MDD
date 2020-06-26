@@ -24,12 +24,14 @@ coged.speech.path<-"https://raw.githubusercontent.com/jlcrawford/MDD/master/Data
 NASA.wm.path <- "https://raw.githubusercontent.com/jlcrawford/MDD/master/Data/MDD_NASA_WM.csv"
 NASA.speech.path <- "https://raw.githubusercontent.com/jlcrawford/MDD/master/Data/MDD_NASA_Speech.csv"
 figure.path <- "~/Box Sync/CCPLab_Aging_Studies/Multi-Domain-Discounting/Analysis/Pilots/Figures"
+NCS.path <- "~/Box Sync/CCPLab_Aging_Studies/Multi-Domain-Discounting/Data/Indvidual-Diff-Qs/MDD_NCS.csv"
 
 #Make data frames for Cog-ED and NASA TLX 
 coged.wm <- read.csv(coged.wm.path, header = T)
 coged.speech <- read.csv(coged.speech.path, header = T)
 NASA.wm <- read.csv(NASA.wm.path, header = T)
 NASA.speech <- read.csv(NASA.speech.path, header = T)
+NCS <- read.csv(NCS.path, header = T)
 ```
 
 ```{r SV_CogED, warning=F, message=F}
@@ -202,4 +204,56 @@ p.frust <- ggplot(NASA_frust_sum, aes(x=Task, y=mean.frust)) +
 p.frust
 ```
 
+###Need for Cognition
+``` {r NCS, warning = F, message =  F}
+#Importing and cleaning NCS 
+NCS.clean <- NCS %>% select( -"ncs_complete") %>%
+  mutate(NCS.score = rowSums(.[2:19])) %>%
+  rename(subID = "record_id")
+
+NCS.clean.SV <- right_join(average.SV, NCS.clean) %>%
+  select(subID,Speech,WM,NCS.score)
+
+#Correlating NCS & Cog-ED WM
+WM.NCS.cor <- correlationBF(x = NCS.clean.SV$WM, y = NCS.clean.SV$NCS.score, rscale = 0.707107)
+describe_posterior(WM.NCS.cor, ci = .95)
+#Summarize Bayes Factor from correlation
+WM.NCS.cor
+
+#Plot of correlation between working memory & NCS
+p.WM.NCS <- ggplot(NCS.clean.SV, aes(WM, NCS.score)) +
+   theme(plot.title = element_text(hjust = 0.5), panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background = element_blank(), axis.line = element_line(colour = "black")) +
+  geom_point() + geom_smooth(method=lm) +ggtitle("") +
+    xlab("Working Memory") + ylab("Need for Cognition Score")
+p.WM.NCS
+
+#Correlating NCS & Cog-ED Speech
+Speech.NCS.cor <- correlationBF(x = NCS.clean.SV$Speech, y = NCS.clean.SV$NCS.score, rscale = 0.707107)
+describe_posterior(Speech.NCS.cor, ci = .95)
+#Summarize Bayes Factor from correlation
+Speech.NCS.cor
+
+#Plot of correlation between speech & NCS
+p.Speech.NCS <- ggplot(NCS.clean.SV, aes(Speech, NCS.score)) +
+   theme(plot.title = element_text(hjust = 0.5), panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background = element_blank(), axis.line = element_line(colour = "black")) +
+  geom_point() + geom_smooth(method=lm) +ggtitle("") +
+    xlab("Speech") + ylab("Need for Cognition Score")
+p.Speech.NCS
+
+NCS.clean.SV$WM.scale <- scale(NCS.clean.SV$WM)
+NCS.clean.SV$Speech.scale <- scale(NCS.clean.SV$Speech)
+
+NCS.clean.SV$Coged.av <- (NCS.clean.SV$Speech.scale + NCS.clean.SV$WM.scale)
+#Correlating NCS & Average Cog-ED
+NCS.cor <- correlationBF(x = NCS.clean.SV$Coged.av, y = NCS.clean.SV$NCS.score, rscale = 0.707107)
+describe_posterior(NCS.cor, ci = .95)
+#Summarize Bayes Factor from correlation
+NCS.cor
+#Plot of correlation between working memory & NCS
+p.NCS <- ggplot(NCS.clean.SV, aes(Coged.av, NCS.score)) +
+   theme(plot.title = element_text(hjust = 0.5), panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background = element_blank(), axis.line = element_line(colour = "black")) +
+  geom_point() + geom_smooth(method=lm) +ggtitle("") +
+    xlab("Cog-ED Composite") + ylab("Need for Cognition Score")
+p.NCS
+```
 
