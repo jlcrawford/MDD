@@ -25,6 +25,7 @@ NASA.wm.path <- "https://raw.githubusercontent.com/jlcrawford/MDD/master/Data/MD
 NASA.speech.path <- "https://raw.githubusercontent.com/jlcrawford/MDD/master/Data/MDD_NASA_Speech.csv"
 figure.path <- "~/Box Sync/CCPLab_Aging_Studies/Multi-Domain-Discounting/Analysis/Pilots/Figures"
 NCS.path <- "~/Box Sync/CCPLab_Aging_Studies/Multi-Domain-Discounting/Data/Indvidual-Diff-Qs/MDD_NCS.csv"
+speech.path <- "~/Box Sync/CCPLab_Aging_Studies/Multi-Domain-Discounting/Data/Speech-practice/MDD_autoscore.csv"
 
 #Make data frames for Cog-ED and NASA TLX 
 coged.wm <- read.csv(coged.wm.path, header = T)
@@ -32,6 +33,21 @@ coged.speech <- read.csv(coged.speech.path, header = T)
 NASA.wm <- read.csv(NASA.wm.path, header = T)
 NASA.speech <- read.csv(NASA.speech.path, header = T)
 NCS <- read.csv(NCS.path, header = T)
+speech <- read.csv(speech.path, header = T)
+```
+
+```{r speech_task, warning=F, message=F}
+speech.clean <- speech %>% 
+  rename("subID" = id,
+         "score" = autoscore) %>%
+  mutate(taskCode = factor(level, levels = c("black","red","blue","purple"), labels = c(0,1,2,3)))
+
+speech.sum <- summarySEwithin2(data = speech.clean, measurevar = "score", withinvars = "level", idvar = "subID")
+speech.sum$level <- factor(speech.sum$level, levels = c("black","red","blue","purple"), labels = c("0 SNR","-4 SNR","-8 SNR","-12 SNR"))
+speech.sum$intelligibility <- speech.sum$score/4
+
+speech.subj <- speech.clean %>% group_by(subID, level) %>%
+  summarise(intelligibility = (mean(score)/4))
 ```
 
 ```{r SV_CogED, warning=F, message=F}
