@@ -1,0 +1,233 @@
+---
+title: "Domain-general cognitive motivation: evidence from economic decision-making"
+author: "JC"
+date: "3/24/2021"
+output:
+  html_document: default
+  code_folding: "hide"
+---
+#Domain-general cognitive motivation: evidence from economic decision-making
+##30 YAs; ages 20-40
+
+```{r setup, warning=FALSE, message=FALSE}
+rm(list=ls())
+
+# Packages
+library(lme4); library(knitr); library(kableExtra); library(RColorBrewer); library(tidyverse);
+source("summarySEwithin2.R")
+
+#Create data directories
+coged.wm.path<-"~/Box Sync/CCPLab_Aging_Studies/Multi-Domain-Discounting/Data/Online/CogED/mdd_coged_wm.csv"
+coged.speech.path<-"~/Box Sync/CCPLab_Aging_Studies/Multi-Domain-Discounting/Data/Online/CogED/mdd_coged_speech.csv"
+
+#Make data frames for Cog-ED and demographics info
+coged.wm<- read.csv(coged.wm.path, header = T)
+coged.speech<- read.csv(coged.speech.path, header = T)
+```
+
+```{r SV_CogED, warning=F, message=F}
+#clean data frame with Cog-ED SV estimates and transform data across so that SV estimates are equivalent across both domains (i.e., speech, WM)
+d.coged.wm <- coged.wm %>% select(subjectid,completed,fixedAmount_N2_1,fixedAmount_N2_2,fixedAmount_N2_3,fixedAmount_N3_1,fixedAmount_N3_2,
+                            fixedAmount_N3_3,fixedAmount_N4_1,fixedAmount_N4_2,fixedAmount_N4_3,
+                            IP12_1,IP12_2,IP12_3,IP13_1,IP13_2,IP13_3,IP14_1,IP14_2,IP14_3) %>%
+  filter(completed == 1) %>%
+  group_by(subjectid) %>%
+  mutate(Domain = "WM",
+         domainCode = 0,
+         SV2_1 = ifelse(fixedAmount_N2_1 == "X", IP12_1/2, ((2-IP12_1)/2)+1),
+         SV2_2 = ifelse(fixedAmount_N2_2 == "X", IP12_2/3, ((3-IP12_2)/3)+1),
+         SV2_3 = ifelse(fixedAmount_N2_3 == "X", IP12_1/4, ((4-IP12_3)/4)+1),
+         SV3_1 = ifelse(fixedAmount_N3_1 == "X", IP13_1/2, ((2-IP13_1)/2)+1),
+         SV3_2 = ifelse(fixedAmount_N3_2 == "X", IP13_2/3, ((3-IP13_2)/3)+1),
+         SV3_3 = ifelse(fixedAmount_N3_3 == "X", IP13_1/4, ((4-IP13_3)/4)+1),
+         SV4_1 = ifelse(fixedAmount_N4_1 == "X", IP14_1/2, ((2-IP14_1)/2)+1),
+         SV4_2 = ifelse(fixedAmount_N4_2 == "X", IP14_2/3, ((3-IP14_2)/3)+1),
+         SV4_3 = ifelse(fixedAmount_N4_3 == "X", IP14_3/4, ((4-IP14_3)/4)+1),
+         SV_red = (SV2_1 + SV2_2 + SV2_3)/3,
+         SV_blue = (SV3_1 + SV3_2 + SV3_3)/3,
+         SV_purple = (SV4_1 + SV4_2 + SV4_3)/3)
+
+d.coged.speech <- coged.speech %>% select(subjectid,completed,fixedAmount_N2_1,fixedAmount_N2_2,fixedAmount_N2_3,fixedAmount_N3_1,
+                            fixedAmount_N3_2,fixedAmount_N3_3,fixedAmount_N4_1,fixedAmount_N4_2,fixedAmount_N4_3,
+                            IP12_1,IP12_2,IP12_3,IP13_1,IP13_2,IP13_3,IP14_1,IP14_2,IP14_3) %>%
+  filter(completed == 1) %>%
+  group_by(subjectid) %>%
+  mutate(Domain = "Speech",
+         domainCode = 1,
+         SV2_1 = ifelse(fixedAmount_N2_1 == "X", IP12_1/2, ((2-IP12_1)/2)+1),
+         SV2_2 = ifelse(fixedAmount_N2_2 == "X", IP12_2/3, ((3-IP12_2)/3)+1),
+         SV2_3 = ifelse(fixedAmount_N2_3 == "X", IP12_1/4, ((4-IP12_3)/4)+1),
+         SV3_1 = ifelse(fixedAmount_N3_1 == "X", IP13_1/2, ((2-IP13_1)/2)+1),
+         SV3_2 = ifelse(fixedAmount_N3_2 == "X", IP13_2/3, ((3-IP13_2)/3)+1),
+         SV3_3 = ifelse(fixedAmount_N3_3 == "X", IP13_1/4, ((4-IP13_3)/4)+1),
+         SV4_1 = ifelse(fixedAmount_N4_1 == "X", IP14_1/2, ((2-IP14_1)/2)+1),
+         SV4_2 = ifelse(fixedAmount_N4_2 == "X", IP14_2/3, ((3-IP14_2)/3)+1),
+         SV4_3 = ifelse(fixedAmount_N4_3 == "X", IP14_3/4, ((4-IP14_3)/4)+1),
+         SV_red = (SV2_1 + SV2_2 + SV2_3)/3,
+         SV_blue = (SV3_1 + SV3_2 + SV3_3)/3,
+         SV_purple = (SV4_1 + SV4_2 + SV4_3)/3)
+
+coged.merged <- rbind(d.coged.wm, d.coged.speech)
+
+d.coged.SV <- coged.merged %>% select(subjectid,Domain,domainCode, SV_red, SV_blue, SV_purple) %>%
+  pivot_longer(names_to = "tmp", values_to = "SV", -c(subjectid,Domain,domainCode)) %>%
+  separate(col = tmp, into=c(NA,"Task"), sep = "_") %>%
+  mutate(taskCode = factor(Task, levels=c("red","blue","purple"), labels=c(-1,0,1)))
+d.coged.SV$taskCode <- as.numeric(d.coged.SV$taskCode)
+d.coged.SV$domainCode <- as.numeric(d.coged.SV$domainCode)
+
+m.SV.coged <- lmer(data = d.coged.SV, SV ~ taskCode*domainCode + (1 | subjectid))
+summary(m.SV.coged)
+```
+
+##Cognitive Effort Discounting
+
+``` {r CogED_Plot, warning = F, message = F}
+CogED_sum <- summarySEwithin2(d.coged.SV, measurevar = "SV", withinvars = c("Task","Domain"), idvar = "subjectid")
+CogED_sum$Task <- factor(CogED_sum$Task, levels = c("red","blue","purple"), labels = c("red","blue","purple"))
+CogED_sum$Domain <- factor(CogED_sum$Domain, levels = c("WM","Speech"), labels = c("WM","Speech"))
+
+#Plotting SV across both gain and loss domains
+Domain.labs <- c("Speech Comprehension", "Working Memory")
+names(Domain.labs) <- c("Speech", "WM")
+
+fig.1 <- ggplot(CogED_sum, aes(x=Task, y=SV, fill=Task, color=Task)) + 
+  theme(plot.title = element_text(hjust = 0.5), panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background = element_blank(), axis.line = element_line(colour = "black"), axis.title.y = element_text(face="bold", size=16),legend.title = element_text(face="bold", size=16)) +
+  geom_bar(stat="identity", position=position_dodge(), alpha=.45, size=1.5) +
+  geom_errorbar(position=position_dodge(width=0.9), aes(ymin=SV-ci, ymax=SV+ci), width=.2, size=1.25) +  
+  geom_point(data = d.coged.SV, aes(x=Task, y=SV, color=Task),
+             stat="identity", alpha=0.7, position = "jitter") +
+  scale_x_discrete(breaks=NULL) +
+  xlab("") + ylab("Subjective Value") +
+  facet_wrap(.~ Domain, labeller = labeller(Domain = Domain.labs))
+fig.1 + scale_fill_brewer(palette = "Set1",  name="Task Effort Level", labels=c("Low","Medium","High")) + scale_color_brewer(palette = "Set1", name="Task Effort Level",labels=c("Low","Medium","High"))
+```
+
+##NASA TLX
+####Participants completed NASA ratings after each load level during the familiarization phase (likert scale: 1-21; higher values indicate greater endorsement)
+
+``` {r Self-Report, warning = F, message = F}
+#Mental Demand Ratings
+NASA.m.demand <- coged %>% select(subjectid, agegroup, mentaldemand_1, mentaldemand_2, mentaldemand_3, mentaldemand_4) %>%
+  group_by(subjectid,agegroup) %>%
+  pivot_longer(names_to = "mental_demand", values_to = "rating", -c(subjectid, agegroup)) %>%
+  separate(col = mental_demand, into=c(NA,"Task"), sep = "_") %>%
+  mutate(taskCode = factor(Task, levels=c(1,2,3,4), labels=c(0,1,2,3)),
+          ageCode = factor(agegroup, levels = c("young","old"), labels = c(0,1)))
+NASA.m.demand$taskCode <- as.numeric(NASA.m.demand$taskCode)
+NASA.m.demand$ageCode <- as.numeric(NASA.m.demand$ageCode)
+NASA_mdemand_sum <- summarySEwithin2(NASA.m.demand, measurevar = "rating", withinvars = c("Task"), betweenvars = c("agegroup"), idvar = "subjectid")
+NASA_mdemand_sum$Task <- factor(NASA_mdemand_sum$Task, levels = c(1,2,3,4), labels = c("0 SNR","-4 SNR","-8 SNR","-12 SNR"))
+
+m.mentalDemand <- lmer(data = NASA.m.demand, rating ~ taskCode*ageCode + (1 | subjectid))
+summary(m.mentalDemand)
+
+p.m.demand <- ggplot(NASA_mdemand_sum, aes(x=Task, y=rating, fill=agegroup)) + 
+  theme(plot.title = element_text(hjust = 0.5), panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background = element_blank(), axis.line = element_line(colour = "black")) +
+  geom_bar(stat="identity", position=position_dodge()) +
+  geom_errorbar(position=position_dodge(width=0.9), aes(ymin=rating-ci, ymax=rating+ci), width=.2) +  
+  xlab("Task") + ylab("Mental Demand") + ggtitle("Self-Reported Mental Demand") 
+p.m.demand + labs(fill = "Age Group") + scale_fill_brewer(palette = "Paired")
+
+#Frustration Ratings
+NASA.frust <- coged %>% select(subjectid, agegroup, frustration_1, frustration_2, frustration_3, frustration_4) %>%
+  group_by(subjectid,agegroup) %>%
+  pivot_longer(names_to = "frustration", values_to = "rating", -c(subjectid, agegroup)) %>%
+  separate(col = frustration, into=c(NA,"Task"), sep = "_") %>%
+  mutate(taskCode = factor(Task, levels=c(1,2,3,4), labels=c(0,1,2,3)),
+          ageCode = factor(agegroup, levels = c("young","old"), labels = c(0,1)))
+NASA.frust$taskCode <- as.numeric(NASA.frust$taskCode)
+NASA.frust$ageCode <- as.numeric(NASA.frust$ageCode)
+
+m.Frustration <- lmer(data = NASA.frust, rating ~ taskCode*ageCode + (1 | subjectid))
+summary(m.Frustration)
+
+NASA_frust_sum <- summarySEwithin2(NASA.frust, measurevar = "rating", withinvars = c("Task"), betweenvars = c("agegroup"), idvar = "subjectid")
+NASA_frust_sum$Task <- factor(NASA_frust_sum$Task, levels = c(1,2,3,4), labels = c("0 SNR","-4 SNR","-8 SNR","-12 SNR"))
+
+p.frust <- ggplot(NASA_frust_sum, aes(x=Task, y=rating, fill=agegroup)) + 
+  theme(plot.title = element_text(hjust = 0.5), panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background = element_blank(), axis.line = element_line(colour = "black")) +
+  geom_bar(stat="identity", position=position_dodge()) +
+  geom_errorbar(position=position_dodge(width=0.9), aes(ymin=rating-ci, ymax=rating+ci), width=.2) +  
+  xlab("Task") + ylab("Frustration") + ggtitle("Self-Reported Frustration") 
+p.frust +  labs(fill = "Age Group") + scale_fill_brewer(palette = "Paired")
+
+#Effort Ratings
+NASA.effort <- coged %>% select(subjectid, agegroup, effort_1, effort_2, effort_3, effort_4) %>%
+  group_by(subjectid,agegroup) %>%
+  pivot_longer(names_to = "effort", values_to = "rating", -c(subjectid,agegroup)) %>%
+  separate(col = effort, into=c(NA,"Task"), sep = "_") %>%
+    mutate(taskCode = factor(Task, levels=c(1,2,3,4), labels=c(0,1,2,3)),
+          ageCode = factor(agegroup, levels = c("young","old"), labels = c(0,1)))
+NASA.effort$taskCode <- as.numeric(NASA.effort$taskCode)
+NASA.effort$ageCode <- as.numeric(NASA.effort$ageCode)
+
+m.Effort <- lmer(data = NASA.effort, rating ~ taskCode*ageCode + (1 | subjectid))
+summary(m.Effort)
+
+NASA_effort_sum <- summarySEwithin2(NASA.effort, measurevar = "rating", withinvars = c("Task"), betweenvars = c("agegroup"), idvar = "subjectid")
+NASA_effort_sum$Task <- factor(NASA_effort_sum$Task, levels = c(1,2,3,4), labels = c("0 SNR","-4 SNR","-8 SNR","-12 SNR"))
+
+p.effort <- ggplot(NASA_effort_sum, aes(x=Task, y=rating, fill=agegroup)) + 
+  theme(plot.title = element_text(hjust = 0.5), panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background = element_blank(), axis.line = element_line(colour = "black")) +
+  geom_bar(stat="identity", position=position_dodge()) +
+  geom_errorbar(position=position_dodge(width=0.9), aes(ymin=rating-ci, ymax=rating+ci), width=.2) +  
+  xlab("Task") + ylab("Effort") + ggtitle("Self-Reported Effort") 
+p.effort + labs(fill = "Age Group") + scale_fill_brewer(palette = "Paired")
+```
+
+##Familiarization Phase Performance
+
+``` {r Familiarization, warning = F, message = F}
+performance <- coged %>% select(subjectid,agegroup, percentCorrect_N1, percentCorrect_N2, percentCorrect_N3, percentCorrect_N4) %>%
+   group_by(subjectid) %>%
+  pivot_longer(names_to = "level", values_to = "performance", -c(subjectid,agegroup)) %>%
+  separate(col = level, into=c(NA,"Task"), sep = "_") 
+
+performance_sum <- summarySEwithin2(performance, measurevar = "performance", withinvars = c("Task"), betweenvars = c("agegroup"), idvar = "subjectid")
+performance_sum$Task <- factor(performance_sum$Task, levels = c("N1","N2","N3","N4"), labels = c("0 SNR","-4 SNR","-8 SNR","-12 SNR"))
+
+performance.table <- kable(performance_sum %>% select(!contains("Normed")), caption = "Mean Accuracy of Keywords across Load Levels") %>%  kable_styling(bootstrap_options = c("striped", "hover", "condensed"))
+performance.table
+```
+
+##Post-Task Questionnaire
+####Participants completed post-task ratings at the conclusion of the experiment (likert scale: 1-10)
+
+###Avoidance = To what degree did you choose the easier task because you wanted to avoid difficulty?
+
+###Caring = To what degree did you select tasks based on whether or not you would be able to win (or lose) money?
+
+###Challenge = To what degree did you choose the harder task because you wanted to challenge yourself?
+
+###Difficulty = To what degree were your choices based on the difficulty of each task?
+
+###Effort = To what degree were your choices based on the amount of effort each task required?
+
+###Maintenance = To what degree did you select tasks based on whether or not you would be able to maintain your effort?
+
+###Money = To what degree were your choices based on the offer amount ($) of each task?
+
+``` {r PTQ, warning = F, message = F}
+PTQ.clean <- PTQ %>%  select(subject,agegroup, ends_with("response")) %>% select(!contains("strat")) %>% select(!contains("listening")) %>%
+  pivot_longer(names_to = "dimension", values_to = "rating", -c(subject,agegroup)) %>%
+  separate(col = dimension, into=c("dimension",NA), sep = "_")
+ 
+PTQ_sum <- summarySEwithin2(PTQ.clean, measurevar = "rating", withinvars = c("dimension"), betweenvars = c("agegroup"), idvar = "subject")
+  
+p.PTQ <- ggplot(PTQ_sum, aes(x=dimension, y=rating, fill=agegroup)) + 
+  theme(plot.title = element_text(hjust = 0.5), panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background = element_blank(), axis.line = element_line(colour = "black")) +
+  geom_bar(stat="identity", position=position_dodge()) +
+  geom_errorbar(position=position_dodge(width=0.9), aes(ymin=rating-ci, ymax=rating+ci), width=.2) +  
+  xlab("") + ylab("") + ggtitle("Post-Task Questionnaire") 
+p.PTQ + labs(fill = "Age Group") + scale_fill_brewer(palette = "Paired")
+```
+
+###Self-Reported Strategies
+
+``` {r PTQ_strat, warning = F, message = F}
+#self-reported strategies
+PTQ.strat.subset <- PTQ %>% select(agegroup, contains("strat")) %>% select(!contains("latency")) %>%
+  group_by(agegroup)
+kable(PTQ.strat.subset)
+```
