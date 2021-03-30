@@ -13,7 +13,7 @@ output:
 rm(list=ls())
 
 # Packages
-library(lme4); library(knitr); library(kableExtra); library(RColorBrewer); library(tidyverse);
+library(lme4); library(BayesFactor); library(bayestestR); library(brms); library(knitr); library(kableExtra); library(RColorBrewer); library(tidyverse);
 source("summarySEwithin2.R")
 
 #Create data directories
@@ -102,6 +102,27 @@ fig.1 <- ggplot(CogED_sum, aes(x=Task, y=SV, fill=Task, color=Task)) +
   xlab("") + ylab("Subjective Value") +
   facet_wrap(.~ Domain, labeller = labeller(Domain = Domain.labs))
 fig.1 + scale_fill_brewer(palette = "Set1",  name="Task Effort Level", labels=c("Low","Medium","High")) + scale_color_brewer(palette = "Set1", name="Task Effort Level",labels=c("Low","Medium","High"))
+```
+
+```{r CogED_cor, warning = F, message = F}
+#Correlating Average SV (within-subj) across domains
+average.SV <- coged.merged %>% select(subjectid, Domain, SV_red, SV_blue, SV_purple) %>%
+  group_by(subjectid, Domain) %>%
+  dplyr::summarise(SV_avg = (SV_red + SV_blue + SV_purple)/3) %>%
+  pivot_wider(values_from = "SV_avg", names_from = "Domain")
+
+#Testing for correlation between cognitive effort discounting across working memory & speech domains
+CogED.cor <- correlationBF(x = average.SV$Speech, y = average.SV$WM, rscale = 0.707107)
+describe_posterior(CogED.cor, ci = .95)
+#Summarize Bayes Factor from correlation
+CogED.cor
+
+#Plot of correlation between working memory & speech comprehension domains (Figure 2)
+fig.2 <- ggplot(average.SV, aes(Speech, WM)) +
+   theme(plot.title = element_text(hjust = 0.5), panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background = element_blank(), axis.line = element_line(colour = "black")) +
+  geom_point() + geom_smooth(method=lm) +ggtitle("") +
+    xlab("Speech Comprehension") + ylab("Working Memory")
+fig.2 
 ```
 
 ##NASA TLX
