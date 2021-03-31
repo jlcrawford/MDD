@@ -6,7 +6,7 @@ output:
   html_document: default
   code_folding: "hide"
 ---
-##25 YAs
+## 25 YAs
 
 ```{r setup, warning=FALSE, message=FALSE}
 rm(list=ls())
@@ -79,7 +79,7 @@ m.SV.coged <- lmer(data = d.coged.SV, SV ~ taskCode*domainCode + (1 | subjectid)
 summary(m.SV.coged)
 ```
 
-##Cognitive Effort Discounting
+## Cognitive Effort Discounting
 
 ```{r CogED_Plot, warning = F, message = F}
 CogED_sum <- summarySEwithin2(d.coged.SV, measurevar = "SV", withinvars = c("Task","Domain"), idvar = "subjectid")
@@ -123,8 +123,8 @@ fig.2 <- ggplot(average.SV, aes(Speech, WM)) +
 fig.2 
 ```
 
-##NASA TLX
-####Participants completed NASA ratings after each load level during the familiarization phase (likert scale: 1-21; higher values indicate greater endorsement)
+## NASA TLX
+#### Participants completed NASA ratings after each load level during the familiarization phase (likert scale: 1-21; higher values indicate greater endorsement)
 
 ```{r Self-Report, warning = F, message = F}
 #Mental Demand Ratings
@@ -224,8 +224,8 @@ p.effort <- ggplot(NASA_effort_sum, aes(x=Task, y=rating, fill=Domain)) +
 p.effort + labs(fill = "Domain") + scale_fill_brewer(palette = "Paired")
 ```
 
-##Familiarization Phase Performance
-###Speech
+## Familiarization Phase Performance
+### Speech
 ```{r Familiarization_Speech, warning = F, message = F}
 performance.speech <- coged.speech %>% select(subjectid, completed, percentCorrect_N1, percentCorrect_N2, percentCorrect_N3, percentCorrect_N4) %>%
    group_by(subjectid) %>% filter(completed == 1) %>% select(-completed) %>%
@@ -239,7 +239,7 @@ performance.table <- kable(performance_sum %>% select(!contains("Normed")), capt
 performance.table
 ```
 
-###Working Memory
+### Working Memory
 ```{r Familiarization_WM, warning = F, message = F}
 performance.wm <- coged.wm%>% select(subjectid, completed, hitrate_N1, CRrate_N1, hitrate_N2, CRrate_N2, hitrate_N3, CRrate_N3, hitrate_N4, CRrate_N4) %>%
    group_by(subjectid) %>% filter(completed == 1) %>% select(-completed) %>%
