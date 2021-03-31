@@ -6,18 +6,16 @@ output:
   html_document: default
   code_folding: "hide"
 ---
-#Domain-general cognitive motivation: evidence from economic decision-making
 ##25 YAs
 
 ```{r setup, warning=FALSE, message=FALSE}
 rm(list=ls())
 
 # Packages
-library(lme4); library(BayesFactor); library(bayestestR); library(brms); library(knitr); library(kableExtra); library(RColorBrewer); library(tidyverse);
+library(lme4); library(BayesFactor); library(bayestestR); library(knitr); library(kableExtra); library(RColorBrewer); library(tidyverse);
 source("summarySEwithin2.R")
 
 #Create data directories
-
 coged.wm.path<-"~/Box Sync/CCPLab_Aging_Studies/Multi-Domain-Discounting/Data/Online/CogED/mdd_coged_wm.csv"
 coged.speech.path<-"~/Box Sync/CCPLab_Aging_Studies/Multi-Domain-Discounting/Data/Online/CogED/mdd_coged_speech.csv"
 
@@ -128,7 +126,7 @@ fig.2
 ##NASA TLX
 ####Participants completed NASA ratings after each load level during the familiarization phase (likert scale: 1-21; higher values indicate greater endorsement)
 
-``` {r Self-Report, warning = F, message = F}
+```{r Self-Report, warning = F, message = F}
 #Mental Demand Ratings
 NASA.m.demand.wm <- coged.wm %>% select(subjectid, completed, mentaldemand_1, mentaldemand_2, mentaldemand_3, mentaldemand_4) %>%
   group_by(subjectid) %>%
@@ -227,17 +225,31 @@ p.effort + labs(fill = "Domain") + scale_fill_brewer(palette = "Paired")
 ```
 
 ##Familiarization Phase Performance
-
-``` {r Familiarization, warning = F, message = F}
-performance <- coged %>% select(subjectid,agegroup, percentCorrect_N1, percentCorrect_N2, percentCorrect_N3, percentCorrect_N4) %>%
-   group_by(subjectid) %>%
-  pivot_longer(names_to = "level", values_to = "performance", -c(subjectid,agegroup)) %>%
+###Speech
+```{r Familiarization_Speech, warning = F, message = F}
+performance.speech <- coged.speech %>% select(subjectid, completed, percentCorrect_N1, percentCorrect_N2, percentCorrect_N3, percentCorrect_N4) %>%
+   group_by(subjectid) %>% filter(completed == 1) %>% select(-completed) %>%
+  pivot_longer(names_to = "level", values_to = "performance", -c(subjectid)) %>%
   separate(col = level, into=c(NA,"Task"), sep = "_") 
 
-performance_sum <- summarySEwithin2(performance, measurevar = "performance", withinvars = c("Task"), betweenvars = c("agegroup"), idvar = "subjectid")
+performance_sum <- summarySEwithin2(performance.speech, measurevar = "performance", withinvars = c("Task"), idvar = "subjectid")
 performance_sum$Task <- factor(performance_sum$Task, levels = c("N1","N2","N3","N4"), labels = c("0 SNR","-4 SNR","-8 SNR","-12 SNR"))
 
 performance.table <- kable(performance_sum %>% select(!contains("Normed")), caption = "Mean Accuracy of Keywords across Load Levels") %>%  kable_styling(bootstrap_options = c("striped", "hover", "condensed"))
 performance.table
 ```
 
+###Working Memory
+```{r Familiarization_WM, warning = F, message = F}
+performance.wm <- coged.wm%>% select(subjectid, completed, hitrate_N1, CRrate_N1, hitrate_N2, CRrate_N2, hitrate_N3, CRrate_N3, hitrate_N4, CRrate_N4) %>%
+   group_by(subjectid) %>% filter(completed == 1) %>% select(-completed) %>%
+  pivot_longer(names_to = "level", values_to = "performance", -c(subjectid)) %>%
+  separate(col = level, into=c("Metric","Task"), sep = "_") %>%
+  pivot_wider(names_from = Metric, values_from = performance)
+
+performance.sum.wm <- summarySEwithin2(performance.wm, measurevar = "hitrate", withinvars = c("Task"), idvar = "subjectid")
+performance.sum.wm$Task <- factor(performance.sum.wm$Task, levels = c("N1","N2","N3","N4"), labels = c("1-back","2-back","3-back","4-back"))
+
+performance.table.wm <- kable(performance.sum.wm %>% select(!contains("Normed")), caption = "Hit rate across Load Levels") %>%  kable_styling(bootstrap_options = c("striped", "hover", "condensed"))
+performance.table.wm
+```
