@@ -16,16 +16,37 @@ library(lme4); library(BayesFactor); library(bayestestR); library(knitr); librar
 source("summarySEwithin2.R")
 
 #Create data directories
+#Cog-ED
 coged.wm.path<-"~/Box Sync/CCPLab_Aging_Studies/Multi-Domain-Discounting/Data/Online/CogED/mdd_coged_wm.csv"
 coged.speech.path<-"~/Box Sync/CCPLab_Aging_Studies/Multi-Domain-Discounting/Data/Online/CogED/mdd_coged_speech.csv"
-
+#Individual Difference Questionnaires
+NCS.path <- "~/Box Sync/CCPLab_Aging_Studies/Multi-Domain-Discounting/Data/Online/Questionnaires/MDD_NCS.csv"
+SSQ
+SPSRQ.path <- "~/Box Sync/CCPLab_Aging_Studies/Multi-Domain-Discounting/Data/Online/Questionnaires/MDD_Spsrq.csv"
+BISBAS.path <- "~/Box Sync/CCPLab_Aging_Studies/Multi-Domain-Discounting/Data/Online/Questionnaires/MDD_Bisbas.csv"
+GRAPES.path <- "~/Box Sync/CCPLab_Aging_Studies/Multi-Domain-Discounting/Data/Online/Questionnaires/MDD_Grapes.csv"
+#Working Memory Capacity
+LSpan.path <- "~/Box Sync/CCPLab_Aging_Studies/Multi-Domain-Discounting/Data/Online/Listening-Span/MDD_Listening-Span.csv"
+OSpan.path <- "~/Box Sync/CCPLab_Aging_Studies/Multi-Domain-Discounting/Data/Online/O-Span/MDD_O-Span.csv"
+SymmSpan.path <- "~/Box Sync/CCPLab_Aging_Studies/Multi-Domain-Discounting/Data/Online/Symm-Span/MDD_Symm-Span.csv"
 #Make data frames for Cog-ED and demographics info
 coged.wm<- read.csv(coged.wm.path, header = T)
 coged.speech<- read.csv(coged.speech.path, header = T)
+#Make data frames for individual difference questionnaires 
+NCS <- read.csv(NCS.path, header = T)
+SSQ
+SPSRQ <- read.csv(SPSRQ.path, header = T)
+BISBAS <- read.csv(BISBAS.path, header = T)
+GRAPES <- read.csv(GRAPES.path, header = T)
+#Make data frames for working memory capacity tasks
+LSpan <- read.csv(LSpan.path, header = T)
+OSpan <- read.csv(OSpan.path, header = T)
+SymmSpan <- read.csv(SymmSpan.path, header = T)
 ```
 
 ```{r SV_CogED, warning=F, message=F}
-#clean data frame with Cog-ED SV estimates and transform data across so that SV estimates are equivalent across both domains (i.e., speech, WM)
+#Cog-ED Data
+#clean data frame(s) with Cog-ED subjective value (SV) estimates and transform data so that SV estimates are equivalent across both domains (i.e., speech, WM)
 d.coged.wm <- coged.wm %>% select(subjectid,completed,fixedAmount_N2_1,fixedAmount_N2_2,fixedAmount_N2_3,fixedAmount_N3_1,fixedAmount_N3_2,
                             fixedAmount_N3_3,fixedAmount_N4_1,fixedAmount_N4_2,fixedAmount_N4_3,
                             IP12_1,IP12_2,IP12_3,IP13_1,IP13_2,IP13_3,IP14_1,IP14_2,IP14_3) %>%
@@ -66,15 +87,16 @@ d.coged.speech <- coged.speech %>% select(subjectid,completed,fixedAmount_N2_1,f
          SV_blue = (SV3_1 + SV3_2 + SV3_3)/3,
          SV_purple = (SV4_1 + SV4_2 + SV4_3)/3)
 
+#Merge WM and Speech Cog-ED data frames
 coged.merged <- rbind(d.coged.wm, d.coged.speech)
-
+#Add dummy variables (task, domain) for multilevel models
 d.coged.SV <- coged.merged %>% select(subjectid,Domain,domainCode, SV_red, SV_blue, SV_purple) %>%
   pivot_longer(names_to = "tmp", values_to = "SV", -c(subjectid,Domain,domainCode)) %>%
   separate(col = tmp, into=c(NA,"Task"), sep = "_") %>%
   mutate(taskCode = factor(Task, levels=c("red","blue","purple"), labels=c(-1,0,1)))
 d.coged.SV$taskCode <- as.numeric(d.coged.SV$taskCode)
 d.coged.SV$domainCode <- as.numeric(d.coged.SV$domainCode)
-
+#Multilevel model of subjective value with task and domain as predictors
 m.SV.coged <- lmer(data = d.coged.SV, SV ~ taskCode*domainCode + (1 | subjectid))
 summary(m.SV.coged)
 ```
@@ -82,6 +104,8 @@ summary(m.SV.coged)
 ## Cognitive Effort Discounting
 
 ```{r CogED_Plot, warning = F, message = F}
+#Plotting SV estimates
+#Create summary stats for group plots
 CogED_sum <- summarySEwithin2(d.coged.SV, measurevar = "SV", withinvars = c("Task","Domain"), idvar = "subjectid")
 CogED_sum$Task <- factor(CogED_sum$Task, levels = c("red","blue","purple"), labels = c("red","blue","purple"))
 CogED_sum$Domain <- factor(CogED_sum$Domain, levels = c("WM","Speech"), labels = c("WM","Speech"))
@@ -252,4 +276,53 @@ performance.sum.wm$Task <- factor(performance.sum.wm$Task, levels = c("N1","N2",
 
 performance.table.wm <- kable(performance.sum.wm %>% select(!contains("Normed")), caption = "Hit rate across Load Levels") %>%  kable_styling(bootstrap_options = c("striped", "hover", "condensed"))
 performance.table.wm
+```
+
+## Individual Difference Questionnaires
+### Need for Cognition
+
+``` {r NCS, warning = F, message =  F}
+#Importing and cleaning NCS 
+NCS.clean <- NCS %>% select( -"ncs_complete") %>%
+  mutate(NCS.score = rowSums(.[2:19])) %>%
+  rename(subID = "record_id")
+
+NCS.clean.SV <- right_join(average.SV, NCS.clean) %>%
+  select(subID,Speech,WM,NCS.score)
+```
+
+### Speech Self-Report (SSQ)
+
+``` {r SSQ, warning = F, message =  F}
+#Importing and cleaning SSQ 
+NCS.clean <- NCS %>% select( -"ncs_complete") %>%
+  mutate(NCS.score = rowSums(.[2:19])) %>%
+  rename(subID = "record_id")
+
+NCS.clean.SV <- right_join(average.SV, NCS.clean) %>%
+  select(subID,Speech,WM,NCS.score)
+```
+
+### Reward Motivation (BIS/BAS, SPSRQ, GRAPES)
+
+``` {r Reward, warning = F, message =  F}
+#Importing and cleaning NCS 
+NCS.clean <- NCS %>% select( -"ncs_complete") %>%
+  mutate(NCS.score = rowSums(.[2:19])) %>%
+  rename(subID = "record_id")
+
+NCS.clean.SV <- right_join(average.SV, NCS.clean) %>%
+  select(subID,Speech,WM,NCS.score)
+```
+
+### Working Memory Capacity (Listing Span, Operation Span, Symmetry Span)
+
+``` {r WMC, warning = F, message =  F}
+#Importing and cleaning NCS 
+NCS.clean <- NCS %>% select( -"ncs_complete") %>%
+  mutate(NCS.score = rowSums(.[2:19])) %>%
+  rename(subID = "record_id")
+
+NCS.clean.SV <- right_join(average.SV, NCS.clean) %>%
+  select(subID,Speech,WM,NCS.score)
 ```
