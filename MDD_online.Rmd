@@ -8,7 +8,7 @@ output:
 ---
 ## 25 YAs
 
-```{r setup, warning=FALSE, message=FALSE}
+``` {r setup, warning=FALSE, message=FALSE}
 rm(list=ls())
 
 # Packages
@@ -21,7 +21,7 @@ coged.wm.path<-"~/Box Sync/CCPLab_Aging_Studies/Multi-Domain-Discounting/Data/On
 coged.speech.path<-"~/Box Sync/CCPLab_Aging_Studies/Multi-Domain-Discounting/Data/Online/CogED/mdd_coged_speech.csv"
 #Individual Difference Questionnaires
 NCS.path <- "~/Box Sync/CCPLab_Aging_Studies/Multi-Domain-Discounting/Data/Online/Questionnaires/MDD_NCS.csv"
-SSQ
+SSQ.path <- "~/Box Sync/CCPLab_Aging_Studies/Multi-Domain-Discounting/Data/Online/Questionnaires/MDD_ssq.csv"
 SPSRQ.path <- "~/Box Sync/CCPLab_Aging_Studies/Multi-Domain-Discounting/Data/Online/Questionnaires/MDD_Spsrq.csv"
 BISBAS.path <- "~/Box Sync/CCPLab_Aging_Studies/Multi-Domain-Discounting/Data/Online/Questionnaires/MDD_Bisbas.csv"
 GRAPES.path <- "~/Box Sync/CCPLab_Aging_Studies/Multi-Domain-Discounting/Data/Online/Questionnaires/MDD_Grapes.csv"
@@ -34,7 +34,7 @@ coged.wm<- read.csv(coged.wm.path, header = T)
 coged.speech<- read.csv(coged.speech.path, header = T)
 #Make data frames for individual difference questionnaires 
 NCS <- read.csv(NCS.path, header = T)
-SSQ
+SSQ <- read.csv(SSQ.path, header = T)
 SPSRQ <- read.csv(SPSRQ.path, header = T)
 BISBAS <- read.csv(BISBAS.path, header = T)
 GRAPES <- read.csv(GRAPES.path, header = T)
@@ -42,6 +42,15 @@ GRAPES <- read.csv(GRAPES.path, header = T)
 LSpan <- read.csv(LSpan.path, header = T)
 OSpan <- read.csv(OSpan.path, header = T)
 SymmSpan <- read.csv(SymmSpan.path, header = T)
+```
+
+## Generate list of usable data from overview sheet
+
+``` {r Participants, warning = F, message = F}
+MDD.overview.path <- "~/Box Sync/CCPLab_Aging_Studies/Multi-Domain-Discounting/Data/Online/ID-Lists/MDD-online-participant-log.csv"
+MDD.participants <- read.csv(MDD.overview.path, header = T) %>%
+  filter(Complete == "Yes") %>% select(Prolific_ID)
+MDD.list <- sapply(MDD.participants, as.character)
 ```
 
 ```{r SV_CogED, warning=F, message=F}
@@ -52,6 +61,7 @@ d.coged.wm <- coged.wm %>% select(subjectid,completed,fixedAmount_N2_1,fixedAmou
                             IP12_1,IP12_2,IP12_3,IP13_1,IP13_2,IP13_3,IP14_1,IP14_2,IP14_3) %>%
   filter(completed == 1) %>%
   group_by(subjectid) %>%
+  filter(duplicated(subjectid)) %>%
   mutate(Domain = "WM",
          domainCode = 0,
          SV2_1 = ifelse(fixedAmount_N2_1 == "X", IP12_1/2, ((2-IP12_1)/2)+1),
@@ -67,11 +77,13 @@ d.coged.wm <- coged.wm %>% select(subjectid,completed,fixedAmount_N2_1,fixedAmou
          SV_blue = (SV3_1 + SV3_2 + SV3_3)/3,
          SV_purple = (SV4_1 + SV4_2 + SV4_3)/3)
 
-d.coged.speech <- coged.speech %>% select(subjectid,completed,fixedAmount_N2_1,fixedAmount_N2_2,fixedAmount_N2_3,fixedAmount_N3_1,
+d.coged.speech <- coged.speech %>%
+  select(subjectid,completed,fixedAmount_N2_1,fixedAmount_N2_2,fixedAmount_N2_3,fixedAmount_N3_1,
                             fixedAmount_N3_2,fixedAmount_N3_3,fixedAmount_N4_1,fixedAmount_N4_2,fixedAmount_N4_3,
                             IP12_1,IP12_2,IP12_3,IP13_1,IP13_2,IP13_3,IP14_1,IP14_2,IP14_3) %>%
   filter(completed == 1) %>%
   group_by(subjectid) %>%
+  filter(duplicated(subjectid)) %>%
   mutate(Domain = "Speech",
          domainCode = 1,
          SV2_1 = ifelse(fixedAmount_N2_1 == "X", IP12_1/2, ((2-IP12_1)/2)+1),
@@ -86,7 +98,6 @@ d.coged.speech <- coged.speech %>% select(subjectid,completed,fixedAmount_N2_1,f
          SV_red = (SV2_1 + SV2_2 + SV2_3)/3,
          SV_blue = (SV3_1 + SV3_2 + SV3_3)/3,
          SV_purple = (SV4_1 + SV4_2 + SV4_3)/3)
-
 #Merge WM and Speech Cog-ED data frames
 coged.merged <- rbind(d.coged.wm, d.coged.speech)
 #Add dummy variables (task, domain) for multilevel models
@@ -283,46 +294,47 @@ performance.table.wm
 
 ``` {r NCS, warning = F, message =  F}
 #Importing and cleaning NCS 
-NCS.clean <- NCS %>% select( -"ncs_complete") %>%
+NCS.clean <- NCS %>% select(c(subject, ends_with("response"))) %>% filter(subject %in% MDD.list) %>%
+    filter(duplicated(subject)) %>%
   mutate(NCS.score = rowSums(.[2:19])) %>%
-  rename(subID = "record_id")
-
-NCS.clean.SV <- right_join(average.SV, NCS.clean) %>%
-  select(subID,Speech,WM,NCS.score)
+  rename(subjectid = "subject")
 ```
 
 ### Speech Self-Report (SSQ)
 
 ``` {r SSQ, warning = F, message =  F}
 #Importing and cleaning SSQ 
-NCS.clean <- NCS %>% select( -"ncs_complete") %>%
-  mutate(NCS.score = rowSums(.[2:19])) %>%
-  rename(subID = "record_id")
-
-NCS.clean.SV <- right_join(average.SV, NCS.clean) %>%
-  select(subID,Speech,WM,NCS.score)
+SSQ.clean <- SSQ %>% select(c(subject, ends_with("response"))) %>% filter(subject %in% MDD.list) %>%
+    filter(duplicated(subject)) %>%
+  mutate(SSQ.total = rowSums(.[2:16]),
+         SSQ.speech = rowSums(.[2:6]),
+         SSQ.spatial = rowSums(.[7:11]),
+         SSQ.quality = rowSums(.[12:16])) %>%
+  rename(subjectid = "subject")
 ```
 
 ### Reward Motivation (BIS/BAS, SPSRQ, GRAPES)
 
 ``` {r Reward, warning = F, message =  F}
-#Importing and cleaning NCS 
-NCS.clean <- NCS %>% select( -"ncs_complete") %>%
-  mutate(NCS.score = rowSums(.[2:19])) %>%
-  rename(subID = "record_id")
+#Importing and cleaning BIS/BAS
+BISBAS.clean <- BISBAS %>% select(c(subjectid, BAS_Drive, BAS_Fun, BAS_Reward, BIS)) %>%
+    filter(duplicated(subjectid))
 
-NCS.clean.SV <- right_join(average.SV, NCS.clean) %>%
-  select(subID,Speech,WM,NCS.score)
+SPSRQ.clean <- SPSRQ %>% select(c(subjectid, BAS_Drive, BAS_Fun, BAS_Reward, BIS)) %>%
+    filter(duplicated(subjectid))
+
+GRAPES.clean <- GRAPES %>% select(c(subject, ends_with("response"))) %>% 
+    filter(duplicated(subject)) %>%
+  mutate(GRAPES.rew = q1_response + q4_response + q6_response + q7_response + q9_response + q10_response + q15_response +
+         q16_response + q16_response + q19_response + q20_response + q21_response + q25_response + q26_response + q27_response,
+         GRAPES.pun = q2_response + q3_response + q5_response + q8_response + q11_response + q12_response + q13_response +
+         q14_response + q18_response + q22_response + q23_response + q24_response + q28_response + q29_response + q30_response) %>%
+  rename(subjectid = "subject")
 ```
 
 ### Working Memory Capacity (Listing Span, Operation Span, Symmetry Span)
 
 ``` {r WMC, warning = F, message =  F}
-#Importing and cleaning NCS 
-NCS.clean <- NCS %>% select( -"ncs_complete") %>%
-  mutate(NCS.score = rowSums(.[2:19])) %>%
-  rename(subID = "record_id")
+#Importing and cleaning WMC measures 
 
-NCS.clean.SV <- right_join(average.SV, NCS.clean) %>%
-  select(subID,Speech,WM,NCS.score)
 ```
