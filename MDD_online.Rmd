@@ -6,32 +6,34 @@ output:
   html_document: default
   code_folding: "hide"
 ---
-## 25 YAs
+## 109 YAs
 
-``` {r setup, warning=FALSE, message=FALSE}
+```{r setup, warning=FALSE, message=FALSE}
 rm(list=ls())
 
 # Packages
-library(lme4); library(BayesFactor); library(bayestestR); library(knitr); library(kableExtra); library(RColorBrewer); library(tidyverse);
+library(lme4); library(BayesFactor); library(bayestestR); library(correlation); library(knitr); library(kableExtra); library(RColorBrewer); library(tidyverse);
 source("summarySEwithin2.R")
 
 #Create data directories
 #Cog-ED
-coged.wm.path<-"~/Box Sync/CCPLab_Aging_Studies/Multi-Domain-Discounting/Data/Online/CogED/mdd_coged_wm.csv"
-coged.speech.path<-"~/Box Sync/CCPLab_Aging_Studies/Multi-Domain-Discounting/Data/Online/CogED/mdd_coged_speech.csv"
+coged.wm.path<-"~/Box/CCPLab_Aging_Studies/Multi-Domain-Discounting/Data/Online/CogED/mdd_coged_wm.csv"
+coged.speech.path<-"~/Box/CCPLab_Aging_Studies/Multi-Domain-Discounting/Data/Online/CogED/mdd_coged_speech.csv"
 #Individual Difference Questionnaires
-NCS.path <- "~/Box Sync/CCPLab_Aging_Studies/Multi-Domain-Discounting/Data/Online/Questionnaires/MDD_NCS.csv"
-SSQ.path <- "~/Box Sync/CCPLab_Aging_Studies/Multi-Domain-Discounting/Data/Online/Questionnaires/MDD_ssq.csv"
-SPSRQ.path <- "~/Box Sync/CCPLab_Aging_Studies/Multi-Domain-Discounting/Data/Online/Questionnaires/MDD_Spsrq.csv"
-BISBAS.path <- "~/Box Sync/CCPLab_Aging_Studies/Multi-Domain-Discounting/Data/Online/Questionnaires/MDD_Bisbas.csv"
-GRAPES.path <- "~/Box Sync/CCPLab_Aging_Studies/Multi-Domain-Discounting/Data/Online/Questionnaires/MDD_Grapes.csv"
+NCS.path <- "~/Box/CCPLab_Aging_Studies/Multi-Domain-Discounting/Data/Online/Questionnaires/MDD_NCS.csv"
+SSQ.path <- "~/Box/CCPLab_Aging_Studies/Multi-Domain-Discounting/Data/Online/Questionnaires/MDD_Ssq.csv"
+SPSRQ.path <- "~/Box/CCPLab_Aging_Studies/Multi-Domain-Discounting/Data/Online/Questionnaires/MDD_Spsrq.csv"
+BISBAS.path <- "~/Box/CCPLab_Aging_Studies/Multi-Domain-Discounting/Data/Online/Questionnaires/MDD_Bisbas.csv"
+GRAPES.path <- "~/Box/CCPLab_Aging_Studies/Multi-Domain-Discounting/Data/Online/Questionnaires/MDD_Grapes.csv"
 #Working Memory Capacity
-LSpan.path <- "~/Box Sync/CCPLab_Aging_Studies/Multi-Domain-Discounting/Data/Online/Listening-Span/MDD_Listening-Span.csv"
-OSpan.path <- "~/Box Sync/CCPLab_Aging_Studies/Multi-Domain-Discounting/Data/Online/O-Span/MDD_O-Span.csv"
-SymmSpan.path <- "~/Box Sync/CCPLab_Aging_Studies/Multi-Domain-Discounting/Data/Online/Symm-Span/MDD_Symm-Span.csv"
+LSpan.path <- "~/Box/CCPLab_Aging_Studies/Multi-Domain-Discounting/Data/Online/Listening-Span/mdd_listening-span.csv"
+OSpan.path <- "~/Box/CCPLab_Aging_Studies/Multi-Domain-Discounting/Data/Online/O-Span/mdd_o-span.csv"
+SymmSpan.path <- "~/Box/CCPLab_Aging_Studies/Multi-Domain-Discounting/Data/Online/Symm-Span/MDD_Symm-Span.csv"
+#complete subject list
+subjects.path <- "~/Box/CCPLab_Aging_Studies/Multi-Domain-Discounting/Data/Online/ID-Lists/subjects_online_MDD.csv"
 #Make data frames for Cog-ED and demographics info
 coged.wm<- read.csv(coged.wm.path, header = T)
-coged.speech<- read.csv(coged.speech.path, header = T)
+coged.speech<- read.csv(coged.speech.path, header = T) 
 #Make data frames for individual difference questionnaires 
 NCS <- read.csv(NCS.path, header = T)
 SSQ <- read.csv(SSQ.path, header = T)
@@ -42,16 +44,10 @@ GRAPES <- read.csv(GRAPES.path, header = T)
 LSpan <- read.csv(LSpan.path, header = T)
 OSpan <- read.csv(OSpan.path, header = T)
 SymmSpan <- read.csv(SymmSpan.path, header = T)
+#Make data frame for useable subject info
+Subjects <- read.csv(subjects.path, header = F)
 ```
 
-## Generate list of usable data from overview sheet
-
-``` {r Participants, warning = F, message = F}
-MDD.overview.path <- "~/Box Sync/CCPLab_Aging_Studies/Multi-Domain-Discounting/Data/Online/ID-Lists/MDD-online-participant-log.csv"
-MDD.participants <- read.csv(MDD.overview.path, header = T) %>%
-  filter(Complete == "Yes") %>% select(Prolific_ID)
-MDD.list <- sapply(MDD.participants, as.character)
-```
 
 ```{r SV_CogED, warning=F, message=F}
 #Cog-ED Data
@@ -61,7 +57,6 @@ d.coged.wm <- coged.wm %>% select(subjectid,completed,fixedAmount_N2_1,fixedAmou
                             IP12_1,IP12_2,IP12_3,IP13_1,IP13_2,IP13_3,IP14_1,IP14_2,IP14_3) %>%
   filter(completed == 1) %>%
   group_by(subjectid) %>%
-  filter(duplicated(subjectid)) %>%
   mutate(Domain = "WM",
          domainCode = 0,
          SV2_1 = ifelse(fixedAmount_N2_1 == "X", IP12_1/2, ((2-IP12_1)/2)+1),
@@ -83,7 +78,6 @@ d.coged.speech <- coged.speech %>%
                             IP12_1,IP12_2,IP12_3,IP13_1,IP13_2,IP13_3,IP14_1,IP14_2,IP14_3) %>%
   filter(completed == 1) %>%
   group_by(subjectid) %>%
-  filter(duplicated(subjectid)) %>%
   mutate(Domain = "Speech",
          domainCode = 1,
          SV2_1 = ifelse(fixedAmount_N2_1 == "X", IP12_1/2, ((2-IP12_1)/2)+1),
@@ -100,6 +94,11 @@ d.coged.speech <- coged.speech %>%
          SV_purple = (SV4_1 + SV4_2 + SV4_3)/3)
 #Merge WM and Speech Cog-ED data frames
 coged.merged <- rbind(d.coged.wm, d.coged.speech)
+
+#Filter out subjects who have not completes all tasks in the protocol
+colnames(Subjects) <- "subjectid"
+coged.merged <-inner_join(Subjects, coged.merged)
+
 #Add dummy variables (task, domain) for multilevel models
 d.coged.SV <- coged.merged %>% select(subjectid,Domain,domainCode, SV_red, SV_blue, SV_purple) %>%
   pivot_longer(names_to = "tmp", values_to = "SV", -c(subjectid,Domain,domainCode)) %>%
@@ -110,6 +109,20 @@ d.coged.SV$domainCode <- as.numeric(d.coged.SV$domainCode)
 #Multilevel model of subjective value with task and domain as predictors
 m.SV.coged <- lmer(data = d.coged.SV, SV ~ taskCode*domainCode + (1 | subjectid))
 summary(m.SV.coged)
+
+#Add dummy variables (task, domain) for multilevel models
+d.coged.SV.full <- coged.merged %>% select(subjectid,Domain,domainCode, SV2_1, SV2_2, SV2_3, SV3_1, SV3_2, SV3_3, SV4_1, SV4_2, SV4_3) %>%
+  pivot_longer(names_to = "tmp", values_to = "SV", -c(subjectid,Domain,domainCode)) %>%
+  separate(col = tmp, into=c("Task","Reward"), sep = "_") %>%
+  mutate(taskCode = factor(Task, levels=c("SV2","SV3","SV4"), labels=c(-1,0,1)),
+         rewardCode = factor(Reward, levels = c(1,2,3), labels = c(-1,0,1)))
+d.coged.SV.full$taskCode <- as.numeric(d.coged.SV.full$taskCode)
+d.coged.SV.full$domainCode <- as.numeric(d.coged.SV.full$domainCode)
+d.coged.SV.full$rewardCode <- as.numeric(d.coged.SV.full$rewardCode)
+
+#Multilevel model of subjective value with task and domain as predictors
+m.SV.coged.full <- lmer(data = d.coged.SV.full, SV ~ taskCode*domainCode*rewardCode + (1 | subjectid))
+summary(m.SV.coged.full)
 ```
 
 ## Cognitive Effort Discounting
@@ -135,6 +148,28 @@ fig.1 <- ggplot(CogED_sum, aes(x=Task, y=SV, fill=Task, color=Task)) +
   xlab("") + ylab("Subjective Value") +
   facet_wrap(.~ Domain, labeller = labeller(Domain = Domain.labs))
 fig.1 + scale_fill_brewer(palette = "Set1",  name="Task Effort Level", labels=c("Low","Medium","High")) + scale_color_brewer(palette = "Set1", name="Task Effort Level",labels=c("Low","Medium","High"))
+
+
+#Plotting SV estimates
+#Create summary stats for group plots
+CogED_Rew_sum <- summarySEwithin2(d.coged.SV.full, measurevar = "SV", withinvars = c("Task","Domain","Reward"), idvar = "subjectid")
+CogED_Rew_sum$Task <- factor(CogED_Rew_sum$Task, levels = c("SV2","SV3","SV4"), labels = c("Low Effort","Medium Effort","High Effort"))
+CogED_Rew_sum$Reward <- factor(CogED_Rew_sum$Reward, levels = c("1","2","3"), labels = c("Low Reward","Medium Reward","High Reward"))
+CogED_Rew_sum$Domain <- factor(CogED_Rew_sum$Domain, levels = c("WM","Speech"), labels = c("WM","Speech"))
+
+#Plotting SV across both gain and loss domains
+Domain.labs <- c("Speech Comprehension", "Working Memory")
+names(Domain.labs) <- c("Speech", "WM")
+
+fig.rew <- ggplot(CogED_Rew_sum, aes(x=Task, y=SV, fill=Task, color=Task)) + 
+  theme(plot.title = element_text(hjust = 0.5), panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background = element_blank(), axis.line = element_line(colour = "black"), axis.title.y = element_text(face="bold", size=16),legend.title = element_text(face="bold", size=16)) +
+  geom_bar(stat="identity", position=position_dodge(), alpha=.45, size=1.5) +
+  geom_errorbar(position=position_dodge(width=0.9), aes(ymin=SV-ci, ymax=SV+ci), width=.2, size=1.25) +  
+  scale_x_discrete(breaks=NULL) +
+  coord_cartesian(ylim = c(0,1)) +
+  xlab("") + ylab("Subjective Value") +
+  facet_wrap(.~ Domain + Reward, labeller = labeller(Domain = Domain.labs))
+fig.rew + scale_fill_brewer(palette = "Set1",  name="Task Effort Level", labels=c("Low","Medium","High")) + scale_color_brewer(palette = "Set1", name="Task Effort Level",labels=c("Low","Medium","High"))
 ```
 
 ```{r CogED_cor, warning = F, message = F}
@@ -145,7 +180,7 @@ average.SV <- coged.merged %>% select(subjectid, Domain, SV_red, SV_blue, SV_pur
   pivot_wider(values_from = "SV_avg", names_from = "Domain")
 
 #Testing for correlation between cognitive effort discounting across working memory & speech domains
-CogED.cor <- correlationBF(x = average.SV$Speech, y = average.SV$WM, rscale = 0.707107)
+CogED.cor <- cor_test(data = average.SV, x = "Speech", y = "WM", bayesian = TRUE, bayesian_prior = 0.707107)
 describe_posterior(CogED.cor, ci = .95)
 #Summarize Bayes Factor from correlation
 CogED.cor
@@ -156,6 +191,30 @@ fig.2 <- ggplot(average.SV, aes(Speech, WM)) +
   geom_point() + geom_smooth(method=lm) +ggtitle("") +
     xlab("Speech Comprehension") + ylab("Working Memory")
 fig.2 
+```
+
+## Removing Participants who have an average SV >1
+
+```{r CogED_cor, warning = F, message = F}
+#Correlating Average SV (within-subj) across domains
+average.SV.outliers <- coged.merged %>% select(subjectid, Domain, SV_red, SV_blue, SV_purple) %>%
+  group_by(subjectid, Domain) %>%
+  dplyr::summarise(SV_avg = (SV_red + SV_blue + SV_purple)/3) %>%
+  pivot_wider(values_from = "SV_avg", names_from = "Domain") %>%
+  filter(Speech < 1) %>% filter(WM < 1)
+
+#Testing for correlation between cognitive effort discounting across working memory & speech domains
+CogED.cor.adj <- cor_test(data = average.SV.outliers, x = "Speech", y = "WM", bayesian = TRUE, bayesian_prior = 0.707107)
+describe_posterior(CogED.cor.adj, ci = .95)
+#Summarize Bayes Factor from correlation
+CogED.cor.adj
+
+#Plot of correlation between working memory & speech comprehension domains (Figure 2)
+fig.outlier.rm <- ggplot(average.SV.outliers, aes(Speech, WM)) +
+   theme(plot.title = element_text(hjust = 0.5), panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background = element_blank(), axis.line = element_line(colour = "black")) +
+  geom_point() + geom_smooth(method=lm) +ggtitle("Reverse Discounters Removed") +
+    xlab("Speech Comprehension") + ylab("Working Memory")
+fig.outlier.rm 
 ```
 
 ## NASA TLX
@@ -281,6 +340,7 @@ performance.wm <- coged.wm%>% select(subjectid, completed, hitrate_N1, CRrate_N1
   pivot_longer(names_to = "level", values_to = "performance", -c(subjectid)) %>%
   separate(col = level, into=c("Metric","Task"), sep = "_") %>%
   pivot_wider(names_from = Metric, values_from = performance)
+performance.wm$task <- factor(performance.wm$Task, levels = c("N1","N2","N3","N4"), labels = c("black","red","blue","purple"))
 
 performance.sum.wm <- summarySEwithin2(performance.wm, measurevar = "hitrate", withinvars = c("Task"), idvar = "subjectid")
 performance.sum.wm$Task <- factor(performance.sum.wm$Task, levels = c("N1","N2","N3","N4"), labels = c("1-back","2-back","3-back","4-back"))
@@ -294,47 +354,153 @@ performance.table.wm
 
 ``` {r NCS, warning = F, message =  F}
 #Importing and cleaning NCS 
-NCS.clean <- NCS %>% select(c(subject, ends_with("response"))) %>% filter(subject %in% MDD.list) %>%
-    filter(duplicated(subject)) %>%
-  mutate(NCS.score = rowSums(.[2:19])) %>%
-  rename(subjectid = "subject")
+NCS.clean <- NCS %>% select(c(subjectid, completed, totalscore)) %>%
+              distinct(subjectid, .keep_all=T)
+
+NCS.SV <- inner_join(average.SV, NCS.clean)
 ```
 
 ### Speech Self-Report (SSQ)
 
 ``` {r SSQ, warning = F, message =  F}
 #Importing and cleaning SSQ 
-SSQ.clean <- SSQ %>% select(c(subject, ends_with("response"))) %>% filter(subject %in% MDD.list) %>%
-    filter(duplicated(subject)) %>%
+SSQ.clean <- SSQ %>% select(c(subject, ends_with("response"))) %>% distinct(subject, .keep_all=T) %>%
   mutate(SSQ.total = rowSums(.[2:16]),
          SSQ.speech = rowSums(.[2:6]),
          SSQ.spatial = rowSums(.[7:11]),
          SSQ.quality = rowSums(.[12:16])) %>%
-  rename(subjectid = "subject")
+  rename(subjectid = "subject") %>%
+  select(subjectid, SSQ.total, SSQ.speech, SSQ.spatial, SSQ.quality)
+
+SSQ.SV <- inner_join(average.SV, SSQ.clean)
 ```
 
 ### Reward Motivation (BIS/BAS, SPSRQ, GRAPES)
 
 ``` {r Reward, warning = F, message =  F}
+#BIS/BAS
 #Importing and cleaning BIS/BAS
-BISBAS.clean <- BISBAS %>% select(c(subjectid, BAS_Drive, BAS_Fun, BAS_Reward, BIS)) %>%
-    filter(duplicated(subjectid))
+BISBAS.clean <- BISBAS %>% select(c(subjectid,completed, BAS_Drive, BAS_Fun, BAS_Reward, BIS)) %>% distinct(subjectid, .keep_all=T) %>% mutate(BAS_total = BAS_Drive + BAS_Fun + BAS_Reward)
+BISBAS.SV <- inner_join(average.SV, BISBAS.clean)
+  
+#SPSRQ
+#Importing and cleaning SPSRQ
+SPSRQ.clean <- SPSRQ %>% select(c(subjectid, completed, SensitivityToReward, SensitivityToPunishment)) %>% distinct(subjectid, .keep_all=T)
+SPSRQ.SV <- inner_join(average.SV, SPSRQ.clean)
 
-SPSRQ.clean <- SPSRQ %>% select(c(subjectid, BAS_Drive, BAS_Fun, BAS_Reward, BIS)) %>%
-    filter(duplicated(subjectid))
-
-GRAPES.clean <- GRAPES %>% select(c(subject, ends_with("response"))) %>% 
-    filter(duplicated(subject)) %>%
+#GRAPES
+GRAPES.clean <- GRAPES %>% select(c(subject, ends_with("response"))) %>% distinct(subject, .keep_all=T) %>%
   mutate(GRAPES.rew = q1_response + q4_response + q6_response + q7_response + q9_response + q10_response + q15_response +
          q16_response + q16_response + q19_response + q20_response + q21_response + q25_response + q26_response + q27_response,
          GRAPES.pun = q2_response + q3_response + q5_response + q8_response + q11_response + q12_response + q13_response +
          q14_response + q18_response + q22_response + q23_response + q24_response + q28_response + q29_response + q30_response) %>%
   rename(subjectid = "subject")
+GRAPES.SV <- inner_join(average.SV, GRAPES.clean)
 ```
 
 ### Working Memory Capacity (Listing Span, Operation Span, Symmetry Span)
 
 ``` {r WMC, warning = F, message =  F}
 #Importing and cleaning WMC measures 
+#Listening Span
+LSpan.clean <- LSpan %>% select(c(subjectid, completed, ListeningSpanScore)) %>% distinct(subjectid, .keep_all=T)
+LSpan.SV <- inner_join(average.SV, LSpan.clean)
 
+#Operation Span
+OSpan.clean <- OSpan %>% select(c(subjectid, completed, ospan)) %>% distinct(subjectid, .keep_all=T)
+OSpan.SV <- inner_join(average.SV, OSpan.clean)
+
+#Symmetry Span
+SymSpan.clean <- SymmSpan %>% select(c(subjectid, completed, sspan)) %>% distinct(subjectid, .keep_all=T)
+SymSpan.SV <- inner_join(average.SV, SymSpan.clean)
+```
+
+##Stage II of Analysis--Partialing out task performance on SV
+
+```{r partialCorr, message=F, warning=F}
+#Working Memory Cog-ED
+#Summarize average performance on N-Back
+d.coged.wm.clean <- d.coged.wm %>% select(subjectid, SV_red, SV_blue, SV_purple) %>%
+  pivot_longer(names_to = "tmp", values_to = "SV", -subjectid) %>%
+   separate(col = tmp, into=c(NA,"task"), sep = "_")
+
+d.coged.wm.partial <- d.coged.wm.clean %>% group_by(subjectid,task) %>% summarise(meanSV = mean(SV)) %>%
+  inner_join(performance.wm, by = c("subjectid","task")) %>%
+  mutate(taskCode = factor(task, levels =c( "black","red","blue","purple"), labels = c(-2,-1,0,1)))
+d.coged.wm.partial$taskCode <- as.numeric(d.coged.wm.partial$taskCode)
+
+m.SV.wm.partial <- lmer(data = d.coged.wm.partial, meanSV ~ taskCode + hitrate + CRrate + (1 | subjectid))
+summary(m.SV.wm.partial)
+head(residuals(m.SV.wm.partial))
+
+res.WM <- resid(m.SV.wm.partial) %>% as_tibble()
+
+#Speech Cog-ED
+d.coged.speech.partial <- d.coged.speech %>% group_by(subjectid,task) %>% summarise(meanSV = mean(SV)) %>%
+  inner_join(speech.subj, by = c("subjectid","task")) %>%
+  mutate(taskCode = factor(task, levels =c("Red","Blue","Purple"), labels = c(-1,0,1)))
+d.coged.speech.partial$taskCode <- as.numeric(d.coged.speech.partial$taskCode)
+
+m.SV.speech.partial <- lmer(data = d.coged.speech.partial, meanSV ~ taskCode + intelligibility + (1 | subID))
+summary(m.SV.speech.partial)
+augment(m.SV.speech.partial)
+res.speech <-residuals(m.SV.speech.partial) %>% as_tibble()
+
+#Testing for correlation between cognitive effort discounting across working memory & speech domains (controlling for task performance)
+CogED.cor.partial <- correlationBF(x = res.WM$Estimate, y = res.speech$Estimate, rscale = 0.707107)
+describe_posterior(CogED.cor.partial, ci = .95)
+#Summarize Bayes Factor from correlation controlling for task performance
+CogED.cor.partial
+```
+
+##Stage III of Analysis--Controlling for WMC and Reward Motivation
+
+```{r Corr_WMC, warning = F, message = F}
+#Create data frame with WMC measures, get z-scores, and create a composite measure
+LSpan.comp <- LSpan.SV %>% select(-c(Speech, WM))
+LSpan.comp$LSpan.z <- scale(LSpan.comp$ListeningSpanScore)
+OSpan.comp <- OSpan.SV %>% select(-c(Speech, WM))
+OSpan.comp$OSpan.z <- scale(OSpan.comp$ospan)
+SymSpan.comp <- SymSpan.SV %>% select(-c(Speech, WM))
+SymSpan.comp$SSpan.z <- scale(SymSpan.comp$sspan)
+
+WMC <- inner_join(LSpan.comp, OSpan.comp, by = "subjectid") %>% inner_join(SymSpan.comp, by = "subjectid") %>%
+  filter(completed.x == 1) %>% filter(completed.y == 1) %>% filter(completed == 1) %>%
+  select(-c("completed.x","completed.y","completed")) %>%
+  mutate(WMC.composite = (LSpan.z + OSpan.z + SSpan.z)) %>%
+  select(subjectid, WMC.composite)
+
+#Create data frame with reward sensitivity measures, get z-scores, and create a composite measure
+BISBAS.comp <- BISBAS.SV %>% select(-c(Speech, WM, BAS_Drive, BAS_Fun, BAS_Reward, BIS))
+BISBAS.comp$BAS.z <- scale(BISBAS.comp$BAS_total)
+SPSRQ.comp <- SPSRQ.SV %>% select(-c(Speech, WM, SensitivityToPunishment))
+SPSRQ.comp$SPSRQ.rew.z <- scale(SPSRQ.comp$SensitivityToReward)
+GRAPES.comp <- GRAPES.SV %>% select(c(subjectid, GRAPES.rew))
+GRAPES.comp$GRAPES.rew.z <- scale(GRAPES.comp$GRAPES.rew)
+
+Reward.composite <- inner_join(BISBAS.comp, SPSRQ.comp, by = "subjectid") %>% inner_join(GRAPES.comp, by = "subjectid") %>%
+  filter(completed.x == 1) %>% filter(completed.y == 1) %>%
+  select(-c("completed.x","completed.y")) %>%
+  mutate(Rew.composite = (BAS.z + SPSRQ.rew.z + GRAPES.rew.z)) %>%
+  select(subjectid, Rew.composite)
+
+#Testing for correlation between WMC Composite and N-Back Familiarization Phase Performance
+SV.composite <- inner_join(WMC, Reward.composite, by = "subjectid") %>% inner_join(average.SV, by = "subjectid")
+
+SV.composite.clean <- cbind(SV.composite$WMC.composite, SV.composite$Rew.composite, SV.composite$Speech, SV.composite$WM) %>% as_tibble()
+
+colnames(SV.composite.clean) <- c("WMC", "Reward", "Speech", "WM")
+
+WMC.cor <- cor_test(data = SV.composite.clean, x = "WM", y = "Speech", bayesian = TRUE, partial_bayesian = TRUE, bayesian_prior  = 0.707107)
+
+WMC.cor.plot <- SV.composite.clean %>% correlation(partial = TRUE) %>% plot()
+#Summarize Bayes Factor from correlation
+
+
+#Plot of correlation between working memory & speech comprehension domains (Figure 2)
+fig.WMC <- ggplot(WMC.NBack, aes(HR, WMC.composite)) +
+   theme(plot.title = element_text(hjust = 0.5), panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background = element_blank(), axis.line = element_line(colour = "black")) +
+  geom_point() + geom_smooth(method=lm) +ggtitle("") +
+    xlab("Average Hit Rate (N-Back)") + ylab("WMC Composite Score")
+fig.WMC
 ```
