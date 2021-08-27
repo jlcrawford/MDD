@@ -431,7 +431,7 @@ fig.outlier.rm <- ggplot(average.SV.outliers, aes(Speech, WM)) +
 fig.outlier.rm 
 ```
 
-### Correlation between averaged residuals from models controlling for the effects of task level & performance (removing outliers)
+### Correlation between averaged residuals from models controlling for the effects of task level & performance
 
 ```{r residCor_outlier, message=F, warning=F}
 #Working Memory Cog-ED
@@ -492,7 +492,7 @@ fig.resid <- ggplot(SV.resids, aes(mean.resid.speech, mean.resid.wm)) +
 fig.resid
 ```
 
-### Partial correlation controlling for WMC and reward sensitivity (from residualized SV estimates; removing outliers)
+### Partial correlation controlling for WMC and reward sensitivity (from residualized SV estimates)
 
 ```{r Cor_WMC_outlier, warning = F, message = F}
 #Create data frame with WMC measures, get z-scores, and create a composite measure
