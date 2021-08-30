@@ -436,60 +436,44 @@ fig.outlier.rm
 ```{r residCor_outlier, message=F, warning=F}
 #Working Memory Cog-ED
 #Summarize average performance on N-Back
-d.coged.wm.clean <- d.coged.wm %>% select(subjectid, SV_red, SV_blue, SV_purple) %>%
-  pivot_longer(names_to = "tmp", values_to = "SV", -subjectid) %>%
-   separate(col = tmp, into=c(NA,"task"), sep = "_")
+outlier.subjs <- average.SV.outliers$subjectid %>% as_tibble()
+colnames(outlier.subjs) <- "subjectid"
 
-d.coged.wm.partial <- d.coged.wm.clean %>% group_by(subjectid,task) %>% summarise(meanSV = mean(SV)) %>%
-  inner_join(performance.wm, by = c("subjectid","task")) %>% inner_join(performance.wm.RT.sum) %>%
-  mutate(taskCode = factor(task, levels =c( "black","red","blue","purple"), labels = c(-2,-1,0,1)),
-         FArate = 1-CRrate,
-         HR_z = scale(hitrate), 
-         FAR_z = scale(FArate),
-         dPrime = HR_z - FAR_z)
+d.coged.wm.partial.outlier <- inner_join(d.coged.wm.partial, outlier.subjs)
 
-d.coged.wm.partial$taskCode <- as.numeric(d.coged.wm.partial$taskCode)
+m.SV.wm.partial.outlier <- lmer(data = d.coged.wm.partial.outlier, meanSV ~ taskCode + hitrate + CRrate + meanRT + (1 | subjectid))
+summary(m.SV.wm.partial.outlier)
 
-m.SV.wm.partial <- lmer(data = d.coged.wm.partial, meanSV ~ taskCode + hitrate + CRrate + meanRT + (1 | subjectid))
-summary(m.SV.wm.partial)
-
-subj.resid.wm <- m.SV.wm.partial@frame[["subjectid"]] %>% as_tibble()
-colnames(subj.resid.wm) <- "subjectid"
-res.WM <- resid(m.SV.wm.partial) %>% as_tibble()
-colnames(res.WM) <- "resid.wm"
-res.subj.WM <- cbind(subj.resid.wm, res.WM)
+subj.resid.wm.outlier <- m.SV.wm.partial.outlier@frame[["subjectid"]] %>% as_tibble()
+colnames(subj.resid.wm.outlier) <- "subjectid"
+res.WM.outlier <- resid(m.SV.wm.partial.outlier) %>% as_tibble()
+colnames(res.WM.outlier) <- "resid.wm"
+res.subj.WM.outlier <- cbind(subj.resid.wm.outlier, res.WM.outlier)
 
 #Speech Cog-ED
-d.coged.speech.clean <- d.coged.speech %>% select(subjectid, SV_red, SV_blue, SV_purple) %>%
-  pivot_longer(names_to = "tmp", values_to = "SV", -subjectid) %>%
-   separate(col = tmp, into=c(NA,"task"), sep = "_")
+d.coged.speech.partial.outlier <- inner_join(d.coged.speech.partial, outlier.subjs)
 
-d.coged.speech.partial <- d.coged.speech.clean %>% group_by(subjectid,task) %>% summarise(meanSV = mean(SV)) %>%
-  inner_join(performance.speech, by = c("subjectid","task")) %>%
-  mutate(taskCode = factor(task, levels =c("red","blue","purple"), labels = c(-1,0,1)))
-d.coged.speech.partial$taskCode <- as.numeric(d.coged.speech.partial$taskCode)
+m.SV.speech.partial.outlier <- lmer(data = d.coged.speech.partial.outlier, meanSV ~ taskCode + performance + (1 | subjectid))
+summary(m.SV.speech.partial.outlier)
 
-m.SV.speech.partial <- lmer(data = d.coged.speech.partial, meanSV ~ taskCode + performance + (1 | subjectid))
-summary(m.SV.speech.partial)
+subj.resid.speech.outlier <- m.SV.speech.partial.outlier@frame[["subjectid"]] %>% as_tibble()
+colnames(subj.resid.speech.outlier) <- "subjectid"
+res.speech.outlier <-residuals(m.SV.speech.partial.outlier) %>% as_tibble()
+colnames(res.speech.outlier) <- "resid.speech"
+res.subj.Speech.outlier <- cbind(subj.resid.speech.outlier, res.speech.outlier)
 
-subj.resid.speech <- m.SV.speech.partial@frame[["subjectid"]] %>% as_tibble()
-colnames(subj.resid.speech) <- "subjectid"
-res.speech <-residuals(m.SV.speech.partial) %>% as_tibble()
-colnames(res.speech) <- "resid.speech"
-res.subj.Speech <- cbind(subj.resid.speech, res.speech)
-
-SV.resids <- cbind(res.subj.WM, res.speech) %>% group_by(subjectid) %>% summarise(mean.resid.wm = mean(resid.wm), mean.resid.speech = mean(resid.speech))
+SV.resids.outlier <- cbind(res.subj.WM.outlier, res.speech.outlier) %>% group_by(subjectid) %>% summarise(mean.resid.wm = mean(resid.wm), mean.resid.speech = mean(resid.speech))
 #Testing for correlation between cognitive effort discounting across working memory & speech domains (controlling for task performance)
-CogED.cor.partial <- cor_test(data = SV.resids, x = "mean.resid.wm", y = "mean.resid.speech", bayesian = TRUE, bayesian_prior = 0.707107)
+CogED.cor.partial.outlier <- cor_test(data = SV.resids.outlier, x = "mean.resid.wm", y = "mean.resid.speech", bayesian = TRUE, bayesian_prior = 0.707107)
 #Summarize Bayes Factor from correlation controlling for task performance
-CogED.cor.partial
+CogED.cor.partial.outlier
 
 #Plot of correlation between working memory & speech comprehension domains controlling for task level & performance
-fig.resid <- ggplot(SV.resids, aes(mean.resid.speech, mean.resid.wm)) +
+fig.resid.outlier <- ggplot(SV.resids.outlier, aes(mean.resid.speech, mean.resid.wm)) +
    theme(plot.title = element_text(hjust = 0.5), panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background = element_blank(), axis.line = element_line(colour = "black")) +
-  geom_point() + geom_smooth(method=lm) +ggtitle("") +
+  geom_point() + geom_smooth(method=lm) +ggtitle("Controlling for task level & performance (reverse discounters removed)") +
     xlab("Speech Comprehension") + ylab("Working Memory")
-fig.resid
+fig.resid.outlier
 ```
 
 ### Partial correlation controlling for WMC and reward sensitivity (from residualized SV estimates)
