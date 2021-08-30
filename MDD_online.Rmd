@@ -496,6 +496,39 @@ WMC.resid.cor.outlier <- cor_test(data = SV.composite.resid.outlier.clean, x = "
 WMC.resid.cor.outlier
 ```
 
+```{r test_pcorr_outlier, warning=FALSE, message=FALSE}
+#WM Cog-ED
+d.coged.wm.partial.outlier.plot <- inner_join(d.coged.wm.partial.outlier, WMC.outlier, by = "subjectid") %>% inner_join(Reward.composite.outlier, by = "subjectid")
+m.SV.wm.partial.outlier.plot <- lmer(data = d.coged.wm.partial.outlier.plot, meanSV ~ taskCode + hitrate + CRrate + meanRT + WMC.composite + Rew.composite + (1 | subjectid))
+
+subj.resid.wm.outlier.plot <- m.SV.wm.partial.outlier.plot@frame[["subjectid"]] %>% as_tibble()
+colnames(subj.resid.wm.outlier.plot) <- "subjectid"
+res.WM.outlier.plot <- resid(m.SV.wm.partial.outlier.plot) %>% as_tibble()
+colnames(res.WM.outlier.plot) <- "resid.wm"
+res.subj.WM.outlier.plot <- cbind(subj.resid.wm.outlier.plot, res.WM.outlier.plot)
+
+#Speech Cog-ED
+d.coged.speech.partial.outlier.plot <- inner_join(d.coged.speech.partial.outlier, WMC.outlier, by = "subjectid") %>% inner_join(Reward.composite.outlier, by = "subjectid")
+m.SV.speech.partial.outlier.plot <- lmer(data = d.coged.speech.partial.outlier.plot, meanSV ~ taskCode + performance + WMC.composite + Rew.composite + (1 | subjectid))
+
+subj.resid.speech.outlier.plot <- m.SV.speech.partial.outlier.plot@frame[["subjectid"]] %>% as_tibble()
+colnames(subj.resid.speech.outlier.plot) <- "subjectid"
+res.speech.outlier.plot <-residuals(m.SV.speech.partial.outlier.plot) %>% as_tibble()
+colnames(res.speech.outlier.plot) <- "resid.speech"
+res.subj.Speech.outlier.plot <- cbind(subj.resid.speech.outlier.plot, res.speech.outlier.plot)
+
+SV.resids.outlier.plot <- cbind(res.subj.WM.outlier.plot, res.speech.outlier.plot) %>% group_by(subjectid) %>% summarise(mean.resid.wm = mean(resid.wm), mean.resid.speech = mean(resid.speech))
+#Testing for correlation between cognitive effort discounting across working memory & speech domains (controlling for task performance)
+CogED.cor.partial.outlier.plot <- cor_test(data = SV.resids.outlier.plot, x = "mean.resid.wm", y = "mean.resid.speech", bayesian = TRUE, bayesian_prior = 0.707107)
+
+#Plot of correlation between working memory & speech comprehension domains controlling for task level, performance, WMC, and reward sensitivity
+fig.resid.outlier.plot <- ggplot(SV.resids.outlier.plot, aes(mean.resid.speech, mean.resid.wm)) +
+   theme(plot.title = element_text(hjust = 0.5), panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background = element_blank(), axis.line = element_line(colour = "black")) +
+  geom_point() + geom_smooth(method=lm) +ggtitle("Partial correlation between speech & working memory (reverse discounters removed)") +
+    xlab("Speech Comprehension") + ylab("Working Memory")
+fig.resid.outlier.plot
+```
+
 ## Additional analysis: Partial correlation controlling for WMC and reward sensitivity using average SV estimates (not residuals)
 
 ```{r Cor_WMC_nonresid, warning = F, message = F}
