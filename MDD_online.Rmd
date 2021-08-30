@@ -409,6 +409,7 @@ fig.resid.2
 # Supplemental Information & Analyses 
 ## Removing Participants who have an average SV >1
 ### Zero-order correlation between working memory and speech subjective value estimates
+#### 99 YAs
 
 ```{r CogED_cor_outlier, warning = F, message = F}
 #Correlating Average SV (within-subj) across domains
@@ -480,41 +481,19 @@ fig.resid.outlier
 
 ```{r Cor_WMC_outlier, warning = F, message = F}
 #Create data frame with WMC measures, get z-scores, and create a composite measure
-LSpan.comp <- LSpan.SV %>% select(-c(Speech, WM))
-LSpan.comp$LSpan.z <- scale(LSpan.comp$ListeningSpanScore)
-OSpan.comp <- OSpan.SV %>% select(-c(Speech, WM))
-OSpan.comp$OSpan.z <- scale(OSpan.comp$ospan)
-SymSpan.comp <- SymSpan.SV %>% select(-c(Speech, WM))
-SymSpan.comp$SSpan.z <- scale(SymSpan.comp$sspan)
-
-WMC <- inner_join(LSpan.comp, OSpan.comp, by = "subjectid") %>% inner_join(SymSpan.comp, by = "subjectid") %>%
-  filter(completed.x == 1) %>% filter(completed.y == 1) %>% filter(completed == 1) %>%
-  select(-c("completed.x","completed.y","completed")) %>%
-  mutate(WMC.composite = (LSpan.z + OSpan.z + SSpan.z)) %>%
-  select(subjectid, WMC.composite)
+WMC.outlier <- inner_join(WMC, outlier.subjs, by = "subjectid")
 
 #Create data frame with reward sensitivity measures, get z-scores, and create a composite measure
-BISBAS.comp <- BISBAS.SV %>% select(-c(Speech, WM, BAS_Drive, BAS_Fun, BAS_Reward, BIS))
-BISBAS.comp$BAS.z <- scale(BISBAS.comp$BAS_total)
-SPSRQ.comp <- SPSRQ.SV %>% select(-c(Speech, WM, SensitivityToPunishment))
-SPSRQ.comp$SPSRQ.rew.z <- scale(SPSRQ.comp$SensitivityToReward)
-GRAPES.comp <- GRAPES.SV %>% select(c(subjectid, GRAPES.rew))
-GRAPES.comp$GRAPES.rew.z <- scale(GRAPES.comp$GRAPES.rew)
-
-Reward.composite <- inner_join(BISBAS.comp, SPSRQ.comp, by = "subjectid") %>% inner_join(GRAPES.comp, by = "subjectid") %>%
-  filter(completed.x == 1) %>% filter(completed.y == 1) %>%
-  select(-c("completed.x","completed.y")) %>%
-  mutate(Rew.composite = (BAS.z + SPSRQ.rew.z + GRAPES.rew.z)) %>%
-  select(subjectid, Rew.composite)
+Reward.composite.outlier <- inner_join(Reward.composite, outlier.subjs, by = "subjectid")
 
 #Testing for partial correlation between residuals (from stage two) controlling for WMC and reward sensitivity
-SV.composite.resid <- inner_join(WMC, Reward.composite, by = "subjectid") %>% inner_join(SV.resids, by = "subjectid")
-SV.composite.resid.clean <- cbind(SV.composite.resid$WMC.composite, SV.composite.resid$Rew.composite, SV.composite.resid$mean.resid.speech, SV.composite.resid$mean.resid.wm) %>% as_tibble()
-colnames(SV.composite.resid.clean) <- c("WMC", "Reward", "Speech", "WM")
+SV.composite.resid.outlier <- inner_join(WMC.outlier, Reward.composite.outlier, by = "subjectid") %>% inner_join(SV.resids.outlier, by = "subjectid")
+SV.composite.resid.outlier.clean <- cbind(SV.composite.resid.outlier$WMC.composite, SV.composite.resid.outlier$Rew.composite, SV.composite.resid.outlier$mean.resid.speech, SV.composite.resid.outlier$mean.resid.wm) %>% as_tibble()
+colnames(SV.composite.resid.outlier.clean) <- c("WMC", "Reward", "Speech", "WM")
 
-WMC.resid.cor <- cor_test(data = SV.composite.resid.clean, x = "WM", y = "Speech", bayesian = TRUE, partial_bayesian = TRUE, bayesian_prior  = 0.707107)
+WMC.resid.cor.outlier <- cor_test(data = SV.composite.resid.outlier.clean, x = "WM", y = "Speech", bayesian = TRUE, partial_bayesian = TRUE, bayesian_prior  = 0.707107)
 #Summarize Bayes Factor from correlation
-WMC.resid.cor
+WMC.resid.cor.outlier
 ```
 
 ## Additional analysis: Partial correlation controlling for WMC and reward sensitivity using average SV estimates (not residuals)
