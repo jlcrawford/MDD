@@ -13,7 +13,7 @@ output:
 rm(list=ls())
 
 # Packages
-library(lme4); library(BayesFactor); library(bayestestR); library(correlation); library(knitr); library(kableExtra); library(RColorBrewer); library(tidyverse);
+library(brms); library(bayestestR); library(correlation); library(knitr); library(kableExtra); library(RColorBrewer); library(tidyverse);
 source("summarySEwithin2.R")
 
 #Create data directories
@@ -114,7 +114,7 @@ d.coged.SV <- coged.merged %>% select(subjectid,Domain,domainCode, SV_red, SV_bl
 d.coged.SV$taskCode <- as.numeric(d.coged.SV$taskCode)
 d.coged.SV$domainCode <- as.numeric(d.coged.SV$domainCode)
 #Multilevel model of subjective value with task and domain as predictors
-m.SV.coged <- lmer(data = d.coged.SV, SV ~ taskCode*domainCode + (1 | subjectid))
+m.SV.coged <- brm(data = d.coged.SV, SV ~ taskCode*domainCode + (1 | subjectid))
 summary(m.SV.coged)
 
 #Add in reward code (in addition to task level and domain) as predictors in model
@@ -128,7 +128,7 @@ d.coged.SV.full$domainCode <- as.numeric(d.coged.SV.full$domainCode)
 d.coged.SV.full$rewardCode <- as.numeric(d.coged.SV.full$rewardCode)
 
 #Multilevel model of subjective value with task and domain as predictors
-m.SV.coged.full <- lmer(data = d.coged.SV.full, SV ~ taskCode*domainCode*rewardCode + (1 | subjectid))
+m.SV.coged.full <- brm(data = d.coged.SV.full, SV ~ taskCode*domainCode*rewardCode + (1 | subjectid))
 summary(m.SV.coged.full)
 ```
 
@@ -249,12 +249,12 @@ d.coged.wm.partial <- d.coged.wm.clean %>% group_by(subjectid,task) %>% summaris
 
 d.coged.wm.partial$taskCode <- as.numeric(d.coged.wm.partial$taskCode)
 
-m.SV.wm.partial <- lmer(data = d.coged.wm.partial, meanSV ~ taskCode + hitrate + CRrate + meanRT + (1 | subjectid))
+m.SV.wm.partial <- brm(data = d.coged.wm.partial, meanSV ~ taskCode + hitrate + CRrate + meanRT + (1 | subjectid))
 summary(m.SV.wm.partial)
 
-subj.resid.wm <- m.SV.wm.partial@frame[["subjectid"]] %>% as_tibble()
+subj.resid.wm <- m.SV.wm.partial[["data"]][["subjectid"]] %>% as_tibble()
 colnames(subj.resid.wm) <- "subjectid"
-res.WM <- resid(m.SV.wm.partial) %>% as_tibble()
+res.WM <- residuals(m.SV.wm.partial) %>% as_tibble() %>% select(Estimate)
 colnames(res.WM) <- "resid.wm"
 res.subj.WM <- cbind(subj.resid.wm, res.WM)
 
@@ -268,12 +268,12 @@ d.coged.speech.partial <- d.coged.speech.clean %>% group_by(subjectid,task) %>% 
   mutate(taskCode = factor(task, levels =c("red","blue","purple"), labels = c(-1,0,1)))
 d.coged.speech.partial$taskCode <- as.numeric(d.coged.speech.partial$taskCode)
 
-m.SV.speech.partial <- lmer(data = d.coged.speech.partial, meanSV ~ taskCode + performance + (1 | subjectid))
+m.SV.speech.partial <- brm(data = d.coged.speech.partial, meanSV ~ taskCode + performance + (1 | subjectid))
 summary(m.SV.speech.partial)
 
-subj.resid.speech <- m.SV.speech.partial@frame[["subjectid"]] %>% as_tibble()
+subj.resid.speech <- m.SV.speech.partial[["data"]][["subjectid"]] %>% as_tibble()
 colnames(subj.resid.speech) <- "subjectid"
-res.speech <-residuals(m.SV.speech.partial) %>% as_tibble()
+res.speech <-residuals(m.SV.speech.partial) %>% as_tibble() %>% select(Estimate)
 colnames(res.speech) <- "resid.speech"
 res.subj.Speech <- cbind(subj.resid.speech, res.speech)
 
@@ -376,21 +376,21 @@ WMC.resid.cor
 ```{r test_pcorr, warning=FALSE, message=FALSE}
 #WM Cog-ED
 d.coged.wm.partial.test <- inner_join(d.coged.wm.partial, WMC, by = "subjectid") %>% inner_join(Reward.composite, by = "subjectid")
-m.SV.wm.partial.test <- lmer(data = d.coged.wm.partial.test, meanSV ~ taskCode + hitrate + CRrate + meanRT + WMC.composite + Rew.composite + (1 | subjectid))
+m.SV.wm.partial.test <- brm(data = d.coged.wm.partial.test, meanSV ~ taskCode + hitrate + CRrate + meanRT + WMC.composite + Rew.composite + (1 | subjectid))
 
-subj.resid.wm.test <- m.SV.wm.partial.test@frame[["subjectid"]] %>% as_tibble()
+subj.resid.wm.test <- m.SV.wm.partial.test[["data"]][["subjectid"]] %>% as_tibble()
 colnames(subj.resid.wm.test) <- "subjectid"
-res.WM.test <- resid(m.SV.wm.partial.test) %>% as_tibble()
+res.WM.test <- resid(m.SV.wm.partial.test) %>% as_tibble() %>% select(Estimate)
 colnames(res.WM.test) <- "resid.wm"
 res.subj.WM.test <- cbind(subj.resid.wm.test, res.WM.test)
 
 #Speech Cog-ED
 d.coged.speech.partial.test <- inner_join(d.coged.speech.partial, WMC, by = "subjectid") %>% inner_join(Reward.composite, by = "subjectid")
-m.SV.speech.partial.test <- lmer(data = d.coged.speech.partial.test, meanSV ~ taskCode + performance + WMC.composite + Rew.composite + (1 | subjectid))
+m.SV.speech.partial.test <- brm(data = d.coged.speech.partial.test, meanSV ~ taskCode + performance + WMC.composite + Rew.composite + (1 | subjectid))
 
-subj.resid.speech.test <- m.SV.speech.partial.test@frame[["subjectid"]] %>% as_tibble()
+subj.resid.speech.test <- m.SV.speech.partial.test[["data"]][["subjectid"]] %>% as_tibble()
 colnames(subj.resid.speech.test) <- "subjectid"
-res.speech.test <-residuals(m.SV.speech.partial.test) %>% as_tibble()
+res.speech.test <-residuals(m.SV.speech.partial.test) %>% as_tibble() %>% select(Estimate)
 colnames(res.speech.test) <- "resid.speech"
 res.subj.Speech.test <- cbind(subj.resid.speech.test, res.speech.test)
 
@@ -442,24 +442,24 @@ colnames(outlier.subjs) <- "subjectid"
 
 d.coged.wm.partial.outlier <- inner_join(d.coged.wm.partial, outlier.subjs)
 
-m.SV.wm.partial.outlier <- lmer(data = d.coged.wm.partial.outlier, meanSV ~ taskCode + hitrate + CRrate + meanRT + (1 | subjectid))
+m.SV.wm.partial.outlier <- brm(data = d.coged.wm.partial.outlier, meanSV ~ taskCode + hitrate + CRrate + meanRT + (1 | subjectid))
 summary(m.SV.wm.partial.outlier)
 
-subj.resid.wm.outlier <- m.SV.wm.partial.outlier@frame[["subjectid"]] %>% as_tibble()
+subj.resid.wm.outlier <- m.SV.wm.partial.outlier[["data"]][["subjectid"]] %>% as_tibble()
 colnames(subj.resid.wm.outlier) <- "subjectid"
-res.WM.outlier <- resid(m.SV.wm.partial.outlier) %>% as_tibble()
+res.WM.outlier <- resid(m.SV.wm.partial.outlier) %>% as_tibble() %>% select(Estimate)
 colnames(res.WM.outlier) <- "resid.wm"
 res.subj.WM.outlier <- cbind(subj.resid.wm.outlier, res.WM.outlier)
 
 #Speech Cog-ED
 d.coged.speech.partial.outlier <- inner_join(d.coged.speech.partial, outlier.subjs)
 
-m.SV.speech.partial.outlier <- lmer(data = d.coged.speech.partial.outlier, meanSV ~ taskCode + performance + (1 | subjectid))
+m.SV.speech.partial.outlier <- brm(data = d.coged.speech.partial.outlier, meanSV ~ taskCode + performance + (1 | subjectid))
 summary(m.SV.speech.partial.outlier)
 
-subj.resid.speech.outlier <- m.SV.speech.partial.outlier@frame[["subjectid"]] %>% as_tibble()
+subj.resid.speech.outlier <- m.SV.speech.partial.outlier[["data"]][["subjectid"]] %>% as_tibble()
 colnames(subj.resid.speech.outlier) <- "subjectid"
-res.speech.outlier <-residuals(m.SV.speech.partial.outlier) %>% as_tibble()
+res.speech.outlier <-residuals(m.SV.speech.partial.outlier) %>% as_tibble() %>% select(Estimate)
 colnames(res.speech.outlier) <- "resid.speech"
 res.subj.Speech.outlier <- cbind(subj.resid.speech.outlier, res.speech.outlier)
 
@@ -499,21 +499,21 @@ WMC.resid.cor.outlier
 ```{r test_pcorr_outlier, warning=FALSE, message=FALSE}
 #WM Cog-ED
 d.coged.wm.partial.outlier.plot <- inner_join(d.coged.wm.partial.outlier, WMC.outlier, by = "subjectid") %>% inner_join(Reward.composite.outlier, by = "subjectid")
-m.SV.wm.partial.outlier.plot <- lmer(data = d.coged.wm.partial.outlier.plot, meanSV ~ taskCode + hitrate + CRrate + meanRT + WMC.composite + Rew.composite + (1 | subjectid))
+m.SV.wm.partial.outlier.plot <- brm(data = d.coged.wm.partial.outlier.plot, meanSV ~ taskCode + hitrate + CRrate + meanRT + WMC.composite + Rew.composite + (1 | subjectid))
 
-subj.resid.wm.outlier.plot <- m.SV.wm.partial.outlier.plot@frame[["subjectid"]] %>% as_tibble()
+subj.resid.wm.outlier.plot <- m.SV.wm.partial.outlier.plot[["data"]][["subjectid"]] %>% as_tibble()
 colnames(subj.resid.wm.outlier.plot) <- "subjectid"
-res.WM.outlier.plot <- resid(m.SV.wm.partial.outlier.plot) %>% as_tibble()
+res.WM.outlier.plot <- residuals(m.SV.wm.partial.outlier.plot) %>% as_tibble() %>% select(Estimate)
 colnames(res.WM.outlier.plot) <- "resid.wm"
 res.subj.WM.outlier.plot <- cbind(subj.resid.wm.outlier.plot, res.WM.outlier.plot)
 
 #Speech Cog-ED
 d.coged.speech.partial.outlier.plot <- inner_join(d.coged.speech.partial.outlier, WMC.outlier, by = "subjectid") %>% inner_join(Reward.composite.outlier, by = "subjectid")
-m.SV.speech.partial.outlier.plot <- lmer(data = d.coged.speech.partial.outlier.plot, meanSV ~ taskCode + performance + WMC.composite + Rew.composite + (1 | subjectid))
+m.SV.speech.partial.outlier.plot <- brm(data = d.coged.speech.partial.outlier.plot, meanSV ~ taskCode + performance + WMC.composite + Rew.composite + (1 | subjectid))
 
-subj.resid.speech.outlier.plot <- m.SV.speech.partial.outlier.plot@frame[["subjectid"]] %>% as_tibble()
+subj.resid.speech.outlier.plot <- m.SV.speech.partial.outlier.plot[["data"]][["subjectid"]] %>% as_tibble()
 colnames(subj.resid.speech.outlier.plot) <- "subjectid"
-res.speech.outlier.plot <-residuals(m.SV.speech.partial.outlier.plot) %>% as_tibble()
+res.speech.outlier.plot <-residuals(m.SV.speech.partial.outlier.plot) %>% as_tibble() %>% select(Estimate)
 colnames(res.speech.outlier.plot) <- "resid.speech"
 res.subj.Speech.outlier.plot <- cbind(subj.resid.speech.outlier.plot, res.speech.outlier.plot)
 
@@ -584,7 +584,7 @@ NASA.m.demand$domainCode <- as.numeric(NASA.m.demand$domainCode)
 NASA_mdemand_sum <- summarySEwithin2(NASA.m.demand, measurevar = "rating", withinvars = c("Task","Domain"), idvar = "subjectid")
 NASA_mdemand_sum$Task <- factor(NASA_mdemand_sum$Task, levels = c(1,2,3,4), labels = c("black","red","blue","purple"))
 
-m.mentalDemand <- lmer(data = NASA.m.demand, rating ~ taskCode*domainCode + (1 | subjectid))
+m.mentalDemand <- brm(data = NASA.m.demand, rating ~ taskCode*domainCode + (1 | subjectid))
 summary(m.mentalDemand)
 
 p.m.demand <- ggplot(NASA_mdemand_sum, aes(x=Task, y=rating, fill=Domain)) + 
@@ -613,7 +613,7 @@ NASA.frust <- rbind(NASA.frust.wm,NASA.frust.speech) %>% select(-completed) %>%
 NASA.frust$taskCode <- as.numeric(NASA.frust$taskCode)
 NASA.frust$domainCode <- as.numeric(NASA.frust$domainCode)
 
-m.Frustration <- lmer(data = NASA.frust, rating ~ taskCode*domainCode + (1 | subjectid))
+m.Frustration <- brm(data = NASA.frust, rating ~ taskCode*domainCode + (1 | subjectid))
 summary(m.Frustration)
 
 NASA_frust_sum <- summarySEwithin2(NASA.frust, measurevar = "rating", withinvars = c("Task","Domain"), idvar = "subjectid")
@@ -645,7 +645,7 @@ NASA.effort <- rbind(NASA.effort.wm,NASA.effort.speech) %>% select(-completed) %
 NASA.effort$taskCode <- as.numeric(NASA.effort$taskCode)
 NASA.effort$domainCode <- as.numeric(NASA.effort$domainCode)
 
-m.Effort <- lmer(data = NASA.effort, rating ~ taskCode*domainCode + (1 | subjectid))
+m.Effort <- brm(data = NASA.effort, rating ~ taskCode*domainCode + (1 | subjectid))
 summary(m.Effort)
 
 NASA_effort_sum <- summarySEwithin2(NASA.effort, measurevar = "rating", withinvars = c("Task","Domain"), idvar = "subjectid")
