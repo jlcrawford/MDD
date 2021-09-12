@@ -22,6 +22,7 @@ coged.wm.path<-"~/Box/CCPLab_Aging_Studies/Multi-Domain-Discounting/Data/Online/
 coged.wm.full.path <-"~/Box/CCPLab_Aging_Studies/Multi-Domain-Discounting/Data/Online/CogED/mdd_coged_wm_full.csv"
 coged.speech.path<-"~/Box/CCPLab_Aging_Studies/Multi-Domain-Discounting/Data/Online/CogED/mdd_coged_speech.csv"
 #Individual Difference Questionnaires
+demo.path <- "~/Box/CCPLab_Aging_Studies/Multi-Domain-Discounting/Data/Online/Questionnaires/MDD_demo.csv"
 NCS.path <- "~/Box/CCPLab_Aging_Studies/Multi-Domain-Discounting/Data/Online/Questionnaires/MDD_NCS.csv"
 SSQ.path <- "~/Box/CCPLab_Aging_Studies/Multi-Domain-Discounting/Data/Online/Questionnaires/MDD_Ssq.csv"
 SPSRQ.path <- "~/Box/CCPLab_Aging_Studies/Multi-Domain-Discounting/Data/Online/Questionnaires/MDD_Spsrq.csv"
@@ -38,6 +39,7 @@ coged.wm<- read.csv(coged.wm.path, header = T)
 coged.wm.full <- read.csv(coged.wm.full.path, header = T)
 coged.speech<- read.csv(coged.speech.path, header = T) 
 #Make data frames for individual difference questionnaires 
+Demo <- read.csv(demo.path, header = T)
 NCS <- read.csv(NCS.path, header = T)
 SSQ <- read.csv(SSQ.path, header = T)
 SPSRQ <- read.csv(SPSRQ.path, header = T)
@@ -47,8 +49,21 @@ GRAPES <- read.csv(GRAPES.path, header = T)
 LSpan <- read.csv(LSpan.path, header = T)
 OSpan <- read.csv(OSpan.path, header = T)
 SymmSpan <- read.csv(SymmSpan.path, header = T)
-#Make data frame for useable subject info
+#Make data frame for usable subject info
 Subjects <- read.csv(subjects.path, header = F)
+```
+
+### Demographic info for sample
+
+```{r Demo, warning=F, message=F}
+colnames(Subjects) <- "subjectid"
+demo.clean <- Demo %>% rename(subjectid = "subject") %>% select(subjectid, contains("_response")) %>% inner_join(Subjects)
+demo.race <- demo.clean %>% group_by(race_response) %>% count(race_response)
+demo.ethnicity <- demo.clean %>% group_by(ethnicity_response) %>% count(ethnicity_response)
+demo.sex <- demo.clean %>% group_by(sex_response) %>% count(sex_response)
+demo.age.mean <- mean(demo.clean$age_response)
+demo.age.sd <- sd(demo.clean$age_response)
+demo.age.range <- range(demo.clean$age_response)
 ```
 
 ## Cognitive Effort Discounting
@@ -103,7 +118,6 @@ d.coged.speech <- coged.speech %>%
 coged.merged <- rbind(d.coged.wm, d.coged.speech)
 
 #Filter out subjects who have not completed all tasks in the protocol
-colnames(Subjects) <- "subjectid"
 coged.merged <-inner_join(Subjects, coged.merged)
 
 #Add dummy variables (task, domain) for multilevel models
@@ -176,6 +190,11 @@ average.SV <- coged.merged %>% select(subjectid, Domain, SV_red, SV_blue, SV_pur
   group_by(subjectid, Domain) %>%
   dplyr::summarise(SV_avg = (SV_red + SV_blue + SV_purple)/3) %>%
   pivot_wider(values_from = "SV_avg", names_from = "Domain")
+
+#T-test between average SV estimates across WM and speech domains
+SV.t <- ttestBF(x= average.SV$WM, y= average.SV$Speech, paired = TRUE, posterior = TRUE, iterations = 1000)
+summary(SV.t)
+SV.t
 
 #Testing for correlation between cognitive effort discounting across working memory & speech domains
 CogED.cor <- cor_test(data = average.SV, x = "Speech", y = "WM", bayesian = TRUE, bayesian_prior = 0.707107)
@@ -669,12 +688,16 @@ NCS.clean <- NCS %>% select(c(subjectid, completed, totalscore)) %>%
               distinct(subjectid, .keep_all=T)
 
 NCS.SV <- inner_join(average.SV, NCS.clean)
-
+NCS.SV$WM.z <- scale(NCS.SV$WM)
+NCS.SV$Speech.z <- scale(NCS.SV$Speech)
+NCS.SV$NCS.comp <- NCS.SV$WM.z + NCS.SV$Speech.z
 #Testing for the correlation between NCS and SV estimates from both WM and Speech comprehension domains 
 NCS.wm.cor <- cor_test(data = NCS.SV, x = "WM", y = "totalscore", bayesian = TRUE, bayesian_prior = 0.707107)
 NCS.wm.cor
 NCS.speech.cor <- cor_test(data = NCS.SV, x = "Speech", y = "totalscore", bayesian = TRUE, bayesian_prior = 0.707107)
 NCS.speech.cor
+NCS.comp.cor <- cor_test(data = NCS.SV, x = "NCS.comp", y = "totalscore", bayesian = TRUE, bayesian_prior = 0.707107)
+NCS.comp.cor
 ```
 
 ### Speech Self-Report (SSQ)
@@ -700,4 +723,20 @@ SSQqual.speech.cor <- cor_test(data = SSQ.SV, x = "Speech", y = "SSQ.quality", b
 SSQqual.speech.cor
 ```
 
+### Comparing performance on N-back and WMC measures
+
+```{r WMC_Nback, message=FALSE, warning=FALSE}
+Nback.perf.subj <- performance.wm %>% select(subjectid, task, hitrate, CRrate) %>%
+  inner_join(performance.wm.RT.sum, by = c("subjectid", "task")) %>%
+  group_by(subjectid) %>% summarise(meanRT = mean(meanRT), meanHR = mean(hitrate), meanCR = mean(CRrate)) %>%
+  inner_join(WMC, by = "subjectid")
+
+#Testing the correlation between N-back performance indicies and WMC composite
+HitRate.WMC.cor <- cor_test(data = Nback.perf.subj, x = "meanHR", y = "WMC.composite", bayesian = TRUE, bayesian_prior = 0.707107)
+HitRate.WMC.cor
+CRrate.WMC.cor <- cor_test(data = Nback.perf.subj, x = "meanCR", y = "WMC.composite", bayesian = TRUE, bayesian_prior = 0.707107)
+CRrate.WMC.cor
+meanRT.WMC.cor <- cor_test(data = Nback.perf.subj, x = "meanRT", y = "WMC.composite", bayesian = TRUE, bayesian_prior = 0.707107)
+meanRT.WMC.cor
+```
 
