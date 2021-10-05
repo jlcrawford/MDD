@@ -4,7 +4,7 @@ author: "Jennifer L. Crawford"
 date: "10/1/2021"
 output: pdf_document
 ---
-# Supplemental Information & Analyses 
+# Supplemental Information & Analyses for Stage II Manuscript
 
 ```{r setup, warning=FALSE, message=FALSE}
 rm(list=ls())
