@@ -4,6 +4,6 @@ This repository contains data and analysis scripts for both the stage I and stag
 
 All data contained within this repository (MDD/Data/) are summary files in CSV format. 
 
-All analysis scripts in this repository (MDD/Analysis/) are R Markdown files (Rmd). All Rmd files link to the file paths for the data contained within this repository and include all pertinent version information of the software used for the analyses (e.g., R version, package versions) with the aim of making these analysis files fully reproducible to the public.
+All analysis scripts in this repository (MDD/Analysis/) are R Markdown files (Rmd). All Rmd files link to the file paths of the data contained within this repository and include all pertinent version information of the software used for the analyses (e.g., R version, package versions) with the aim of making these analysis files fully reproducible to the public.
 
 For additional information, or other materials (e.g., experimental paradigm scripts), please visit our OSF page: https://osf.io/9t6q7/
