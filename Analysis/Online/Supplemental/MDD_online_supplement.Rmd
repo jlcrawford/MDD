@@ -362,6 +362,20 @@ Reward.composite.outlier <- inner_join(BISBAS.comp, SPSRQ.comp, by = "subjectid"
   select(subjectid, Rew.composite)
 ```
 
+### Plotting Distributions of Composite Measures
+
+```{r Density_Comp, warning=FALSE, message=FALSE}
+#WMC density plot
+WMC.density <- ggplot(WMC.outlier, aes(x=WMC.composite))+
+  geom_density(color="darkblue", fill="lightblue")
+WMC.density
+
+#Reward density plot
+Reward.density <- ggplot(Reward.composite.outlier, aes(x=Rew.composite))+
+  geom_density(color="darkred", fill="pink")
+Reward.density
+```
+
 ### Partial correlation controlling for WMC and reward sensitivity (from residualized SV estimates)
 
 ```{r Cor_WMC_outlier, warning = F, message = F}
