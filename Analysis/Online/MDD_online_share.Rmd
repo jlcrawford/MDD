@@ -126,6 +126,7 @@ d.coged.SV$domainCode <- as.numeric(d.coged.SV$domainCode)
 m.SV.coged <- brm(data = d.coged.SV, SV ~ taskCode*domainCode + (1 | subjectid),
 file = "models/m.SV.coged.rds")
 summary(m.SV.coged)
+bayes_R2(m.SV.coged)
 ```
 
 ## Plotting SV estimates across working memory and speech comprehension domains
@@ -286,9 +287,15 @@ d.coged.wm.partial <- d.coged.wm.clean %>% group_by(subjectid,task) %>% summaris
 d.coged.wm.partial$taskCode <- as.numeric(d.coged.wm.partial$taskCode)
 
 #Multilevel model predicting SV from N-Back performance measures (e.g., hit rate, correct rejection rate, RT)
+m.SV.wm <- brm(data = d.coged.wm.partial, meanSV ~ taskCode + (1 | subjectid),
+                       file = "models/m.SV.wm.rds")
+summary(m.SV.wm)
+bayes_R2(m.SV.wm)
+
 m.SV.wm.partial <- brm(data = d.coged.wm.partial, meanSV ~ taskCode + hitrate + CRrate + meanRT + (1 | subjectid),
                        file = "models/m.SV.wm.partial.rds")
 summary(m.SV.wm.partial)
+bayes_R2(m.SV.wm.partial)
 
 #create data frame with residuals from multilevel model
 subj.resid.wm <- m.SV.wm.partial[["data"]][["subjectid"]] %>% as_tibble()
@@ -309,9 +316,15 @@ d.coged.speech.partial <- d.coged.speech.clean %>% group_by(subjectid,task) %>% 
 d.coged.speech.partial$taskCode <- as.numeric(d.coged.speech.partial$taskCode)
 
 #Multilevel model predicting SV from speech-in-noise task performance measures (e.g., intelligibility)
+m.SV.speech <- brm(data = d.coged.speech.partial, meanSV ~ taskCode + (1 | subjectid),
+                           file = "models/m.SV.speech.rds")
+summary(m.SV.speech)
+bayes_R2(m.SV.speech)
+
 m.SV.speech.partial <- brm(data = d.coged.speech.partial, meanSV ~ taskCode + performance + (1 | subjectid),
                            file = "models/m.SV.speech.partial.rds")
 summary(m.SV.speech.partial)
+bayes_R2(m.SV.speech.partial)
 
 #create data frame with residuals from multilevel model
 subj.resid.speech <- m.SV.speech.partial[["data"]][["subjectid"]] %>% as_tibble()
@@ -404,6 +417,17 @@ WMC <- inner_join(LSpan.comp, OSpan.comp, by = "subjectid") %>%
   mutate(WMC.composite = (LSpan.z + OSpan.z + SSpan.z)) %>%
   select(subjectid, WMC.composite)
 
+#Correlating the working memory composite with subjective value in WM domain
+WMC.composite.SV <- inner_join(average.SV, WMC, by = "subjectid")
+WMC.WMSV.cor <- cor_test(data = WMC.composite.SV, x = "WM", y = "WMC.composite", bayesian = TRUE,
+                          partial_bayesian = TRUE, bayesian_prior  = 0.707107)
+WMC.WMSV.cor
+
+#Correlating the reward composite with subjective value in Speech domain
+WMC.SpeechSV.cor <- cor_test(data = WMC.composite.SV, x = "Speech", y = "WMC.composite", bayesian = TRUE,
+                          partial_bayesian = TRUE, bayesian_prior  = 0.707107)
+WMC.SpeechSV.cor
+
 #Create data frame with reward sensitivity measures, get z-scores, and create a composite measure
 BISBAS.comp <- BISBAS.SV %>% select(-c(Speech, WM, BAS_Drive, BAS_Fun, BAS_Reward, BIS))
 BISBAS.comp$BAS.z <- scale(BISBAS.comp$BAS_total)
@@ -419,6 +443,17 @@ Reward.composite <- inner_join(BISBAS.comp, SPSRQ.comp, by = "subjectid") %>%
   mutate(Rew.composite = (BAS.z + SPSRQ.rew.z + GRAPES.rew.z)) %>%
   select(subjectid, Rew.composite)
 
+#Correlating the reward composite with subjective value in WM domain
+Reward.composite.SV <- inner_join(average.SV, Reward.composite, by = "subjectid")
+Reward.WMSV.cor <- cor_test(data = Reward.composite.SV, x = "WM", y = "Rew.composite", bayesian = TRUE,
+                          partial_bayesian = TRUE, bayesian_prior  = 0.707107)
+Reward.WMSV.cor
+
+#Correlating the reward composite with subjective value in Speech domain
+Reward.SpeechSV.cor <- cor_test(data = Reward.composite.SV, x = "Speech", y = "Rew.composite", bayesian = TRUE,
+                          partial_bayesian = TRUE, bayesian_prior  = 0.707107)
+Reward.SpeechSV.cor
+
 #Testing for partial correlation between residuals (from stage two) controlling for WMC and reward sensitivity
 SV.composite.resid <- inner_join(WMC, Reward.composite, by = "subjectid") %>%
   inner_join(SV.resids, by = "subjectid")
@@ -430,6 +465,12 @@ WMC.resid.cor <- cor_test(data = SV.composite.resid.clean, x = "WM", y = "Speech
                           partial_bayesian = TRUE, bayesian_prior  = 0.707107)
 #Summarize Bayes Factor from correlation
 WMC.resid.cor
+
+#Correlating WMC and Reward Sensitivity composites
+d.composites <- inner_join(WMC, Reward.composite, by = "subjectid")
+WMC.Reward.cor <- cor_test(data = d.composites, x = "WMC.composite", y = "Rew.composite", bayesian = TRUE,
+                          partial_bayesian = TRUE, bayesian_prior  = 0.707107)
+WMC.Reward.cor
 ```
 
 ## Figure 2; correlation between working memory & speech comprehension domains controlling for task level, performance, WMC, and reward sensitivity
