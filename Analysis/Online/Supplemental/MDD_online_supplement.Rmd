@@ -1,8 +1,11 @@
 ---
-title: "Supplement for 'Domain-general cognitive motivation: evidence from economic decision-making'"
+title: 'Supplement for ''Domain-general cognitive motivation: evidence from economic
+  decision-making'''
 author: "Jennifer L. Crawford"
 date: "10/1/2021"
-output: pdf_document
+output:
+  word_document: default
+  pdf_document: default
 ---
 # Supplemental Information & Analyses for Stage II Manuscript
 
@@ -368,12 +371,10 @@ Reward.composite.outlier <- inner_join(BISBAS.comp, SPSRQ.comp, by = "subjectid"
 #WMC density plot
 WMC.density <- ggplot(WMC.outlier, aes(x=WMC.composite))+
   geom_density(color="darkblue", fill="lightblue")
-WMC.density
 
 #Reward density plot
 Reward.density <- ggplot(Reward.composite.outlier, aes(x=Rew.composite))+
   geom_density(color="darkred", fill="pink")
-Reward.density
 ```
 
 ### Partial correlation controlling for WMC and reward sensitivity (from residualized SV estimates)
@@ -440,9 +441,10 @@ fig.resid.outlier.plot <- ggplot(SV.resids.outlier.plot, aes(mean.resid.speech, 
          panel.grid.minor = element_blank(), panel.background = element_blank(),
          axis.line = element_line(colour = "black")) +
   geom_point() + geom_smooth(method=lm) + 
-  ggtitle("Partial correlation between speech & working memory (reverse discounters removed)") +
-    xlab("Speech Comprehension") + ylab("Working Memory")
+  ggtitle("") +
+    xlab("Residualized Subjective Value: Speech Comprehension") + ylab("Residualized Subjective Value: Working Memory")
 fig.resid.outlier.plot
+ggsave(fig.resid.outlier.plot, filename = "Figure2c.pdf", width = 10)
 ```
 
 ## NASA TLX
